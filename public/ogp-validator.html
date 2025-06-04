@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OGP Validator</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .card-image {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      background-color: #f9f9f9;
+      padding: 10px;
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin: 0 0 10px 0;
+    }
+    .card-description {
+      color: #666;
+      margin: 0 0 10px 0;
+    }
+    .card-url {
+      color: #0070f3;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .meta-section {
+      margin-top: 30px;
+    }
+    .meta-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .meta-content {
+      background-color: #f7f7f7;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>OGP Validator</h1>
+  <p>このページはYuNi Stellar ChartのOGP設定を検証するためのものです。以下のカードプレビューは、SNSでシェアされた際の表示イメージです。</p>
+  
+  <div class="card">
+    <img src="/og-image.png" alt="OGP Image" class="card-image">
+    <h2 class="card-title">YuNi Stellar Chart</h2>
+    <p class="card-description">YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング</p>
+    <a href="/" class="card-url">yuni-stellar-chart.vercel.app</a>
+  </div>
+  
+  <div class="meta-section">
+    <p class="meta-title">OGP Meta Tags:</p>
+    <pre class="meta-content" id="ogp-tags"></pre>
+  </div>
+  
+  <div class="meta-section">
+    <p class="meta-title">Twitter Card Meta Tags:</p>
+    <pre class="meta-content" id="twitter-tags"></pre>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // OGPタグを取得して表示
+      const ogpTags = document.querySelectorAll('meta[property^="og:"]');
+      let ogpContent = '';
+      ogpTags.forEach(tag => {
+        ogpContent += `<meta property="${tag.getAttribute('property')}" content="${tag.getAttribute('content')}">\n`;
+      });
+      document.getElementById('ogp-tags').textContent = ogpContent || 'OGPタグが見つかりません';
+      
+      // Twitterカードタグを取得して表示
+      const twitterTags = document.querySelectorAll('meta[name^="twitter:"]');
+      let twitterContent = '';
+      twitterTags.forEach(tag => {
+        twitterContent += `<meta name="${tag.getAttribute('name')}" content="${tag.getAttribute('content')}">\n`;
+      });
+      document.getElementById('twitter-tags').textContent = twitterContent || 'Twitterカードタグが見つかりません';
+    });
+  </script>
+</body>
+</html>
