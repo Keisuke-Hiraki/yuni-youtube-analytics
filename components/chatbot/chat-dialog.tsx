@@ -63,6 +63,30 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
     setIsLoading(true)
 
     try {
+      // デバッグ: まずGETエンドポイントをテスト
+      if (inputMessage.toLowerCase().includes('test api')) {
+        console.log('APIテストを実行中...')
+        const testResponse = await fetch('/api/chat', {
+          method: 'GET',
+        })
+        const testData = await testResponse.text()
+        console.log('APIテスト結果:', {
+          status: testResponse.status,
+          data: testData
+        })
+        
+        const testMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `APIテスト結果:\nステータス: ${testResponse.status}\nレスポンス: ${testData}`,
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, testMessage])
+        setIsLoading(false)
+        return
+      }
+
+      console.log('POSTリクエスト送信中...')
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {

@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateChatResponse } from '@/lib/groq'
 import { fetchYuNiVideos } from '@/app/actions'
 
+// テスト用のGETエンドポイント
+export async function GET() {
+  return NextResponse.json({ 
+    message: 'Chat API is working',
+    timestamp: new Date().toISOString(),
+    env: {
+      hasGroqKey: !!process.env.GROQ_API_KEY,
+      hasYouTubeKey: !!process.env.YOUTUBE_API_KEY
+    }
+  })
+}
+
 export async function POST(request: NextRequest) {
   console.log('チャットAPI呼び出し開始')
   
