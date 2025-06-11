@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { X, Send, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { ChatMessage } from '@/lib/groq'
 
@@ -109,7 +108,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
+        <div className="flex-1 pr-4 overflow-y-auto max-h-96">
           <div className="space-y-4">
             {messages.map((message) => (
               <div
@@ -140,7 +139,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="flex gap-2 pt-4">
           <Input
