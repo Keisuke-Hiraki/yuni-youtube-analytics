@@ -3,8 +3,23 @@ import { generateChatResponse } from '@/lib/groq'
 import { fetchYuNiVideos } from '@/app/actions'
 
 export async function POST(request: NextRequest) {
+  console.log('チャットAPI呼び出し開始')
+  
   try {
-    const { message, chatHistory } = await request.json()
+    // リクエストボディの解析
+    let requestBody
+    try {
+      requestBody = await request.json()
+    } catch (parseError) {
+      console.error('リクエストボディのパースエラー:', parseError)
+      return NextResponse.json(
+        { error: 'リクエストボディが無効です' },
+        { status: 400 }
+      )
+    }
+
+    const { message, chatHistory } = requestBody
+    console.log('受信したメッセージ:', { message: message?.substring(0, 100), historyLength: chatHistory?.length })
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
@@ -22,21 +37,41 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('動画データ取得開始')
     // 動画データを取得
-    const { videos } = await fetchYuNiVideos()
+    const { videos, error: videoError } = await fetchYuNiVideos()
+    
+    if (videoError) {
+      console.error('動画データ取得エラー:', videoError)
+      return NextResponse.json(
+        { error: `動画データの取得に失敗しました: ${videoError}` },
+        { status: 500 }
+      )
+    }
 
+    console.log('動画データ取得完了:', { videosCount: videos.length })
+
+    console.log('Groq API呼び出し開始')
     // Groq APIを使用して応答を生成
     const response = await generateChatResponse(message, videos, chatHistory)
+    console.log('Groq API呼び出し完了:', { responseLength: response.length })
 
     return NextResponse.json({ response })
   } catch (error) {
     console.error('チャットAPI エラー:', error)
+    console.error('エラースタック:', error instanceof Error ? error.stack : 'スタック情報なし')
     
     // エラーの詳細情報を含むレスポンス
     let errorMessage = 'チャットボットでエラーが発生しました'
     let statusCode = 500
     
     if (error instanceof Error) {
+      console.error('エラー詳細:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      })
+      
       errorMessage += `\n\nエラー詳細:\n名前: ${error.name}\nメッセージ: ${error.message}`
       
       if (error.message.includes('401') || error.message.includes('Unauthorized')) {
@@ -49,11 +84,27 @@ export async function POST(request: NextRequest) {
         statusCode = 503
         errorMessage += '\n\n原因: ネットワークエラーまたはサービス利用不可'
       }
+    } else {
+      console.error('非Errorオブジェクト:', error)
+      errorMessage += `\n\nエラー内容: ${String(error)}`
     }
     
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: statusCode }
-    )
+    // 確実にJSONレスポンスを返す
+    try {
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: statusCode }
+      )
+    } catch (responseError) {
+      console.error('レスポンス生成エラー:', responseError)
+      // 最後の手段として、プレーンテキストレスポンスを返す
+      return new Response(
+        JSON.stringify({ error: 'サーバー内部エラーが発生しました' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      )
+    }
   }
 } 

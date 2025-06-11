@@ -158,18 +158,30 @@ ${videoDataSection}
       max_tokens: 1000,
     })
 
-    return completion.choices[0]?.message?.content || 'すみません、回答を生成できませんでした。'
+    const result = completion.choices[0]?.message?.content || 'すみません、回答を生成できませんでした。'
+    console.log('Groq API応答成功:', { resultLength: result.length })
+    
+    return result
   } catch (error) {
     console.error('Groq API エラー:', error)
+    console.error('エラースタック:', error instanceof Error ? error.stack : 'スタック情報なし')
     
     // より詳細なエラー情報を提供
     if (error instanceof Error) {
+      console.error('Groqエラー詳細:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      })
+      
       if (error.message.includes('401') || error.message.includes('Unauthorized')) {
         return 'APIキーが無効です。管理者にGROQ_API_KEYの確認を依頼してください。'
       } else if (error.message.includes('429') || error.message.includes('rate limit')) {
         return 'APIの利用制限に達しました。しばらく経ってからもう一度お試しください。'
       } else if (error.message.includes('network') || error.message.includes('fetch')) {
         return 'ネットワークエラーが発生しました。インターネット接続を確認してください。'
+      } else if (error.message.includes('model')) {
+        return 'モデルの問題により回答を生成できませんでした。しばらく経ってからもう一度お試しください。'
       }
     }
     

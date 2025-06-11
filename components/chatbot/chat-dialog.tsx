@@ -75,7 +75,23 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
         signal: abortControllerRef.current.signal
       })
 
-      const data = await response.json()
+      // レスポンスの内容を確認
+      const responseText = await response.text()
+      console.log('APIレスポンス:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: responseText.substring(0, 500) + (responseText.length > 500 ? '...' : '')
+      })
+
+      let data
+      try {
+        data = JSON.parse(responseText)
+      } catch (parseError) {
+        console.error('JSONパースエラー:', parseError)
+        console.error('レスポンステキスト:', responseText)
+        throw new Error(`サーバーから無効なレスポンスが返されました: ${responseText.substring(0, 100)}`)
+      }
 
       if (response.ok) {
         const assistantMessage: ChatMessage = {
