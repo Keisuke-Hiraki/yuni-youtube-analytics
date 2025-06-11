@@ -1,17 +1,5 @@
-import Groq from 'groq-sdk'
+import { Groq } from 'groq-sdk'
 import { YouTubeVideo } from './youtube'
-
-// 環境変数の確認
-const GROQ_API_KEY = process.env.GROQ_API_KEY
-
-if (!GROQ_API_KEY) {
-  console.error('GROQ_API_KEY環境変数が設定されていません')
-}
-
-// Groqクライアントの初期化
-const groq = GROQ_API_KEY ? new Groq({
-  apiKey: GROQ_API_KEY,
-}) : null
 
 // チャットメッセージの型定義
 export interface ChatMessage {
@@ -48,11 +36,18 @@ export async function generateChatResponse(
   chatHistory: ChatMessage[] = []
 ): Promise<string> {
   try {
-    // 環境変数が設定されていない場合の処理
-    if (!groq || !GROQ_API_KEY) {
+    // 環境変数の確認（関数内で行う）
+    const GROQ_API_KEY = process.env.GROQ_API_KEY
+    
+    if (!GROQ_API_KEY) {
       console.error('Groq APIキーが設定されていません')
       return 'チャットボット機能を利用するには、管理者にGROQ_API_KEYの設定を依頼してください。'
     }
+
+    // Groqクライアントを関数内で初期化
+    const groq = new Groq({
+      apiKey: GROQ_API_KEY,
+    })
 
     // 関連する動画を検索
     const relevantVideos = searchVideos(videos, message)
@@ -86,7 +81,7 @@ ${relevantVideos.length > 0
 
     const completion = await groq.chat.completions.create({
       messages,
-      model: 'llama-3.1-70b-versatile',
+      model: 'llama-3.3-70b-versatile', // 最新モデルに更新
       temperature: 0.7,
       max_tokens: 1000,
     })
