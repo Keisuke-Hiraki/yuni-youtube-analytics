@@ -4,8 +4,8 @@ export function SiteFooter() {
       <div className="max-w-screen-xl mx-auto flex justify-center items-center px-4 md:px-6">
         <p className="text-sm text-muted-foreground">
           powered by{" "}
-          <a href="https://v0.dev" target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">
-            v0
+          <a href="https://vercel.com/" target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">
+            Vercel
           </a>
         </p>
       </div>
