@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Send, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // 初期メッセージを設定
   useEffect(() => {
@@ -30,8 +31,25 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
     }
   }, [isOpen, messages.length])
 
+  // コンポーネントのクリーンアップ
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
+  }, [])
+
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return
+
+    // 前のリクエストをキャンセル
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
+    // 新しいAbortControllerを作成
+    abortControllerRef.current = new AbortController()
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -54,6 +72,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
           message: inputMessage,
           chatHistory: messages
         }),
+        signal: abortControllerRef.current.signal
       })
 
       const data = await response.json()
@@ -70,6 +89,11 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
         throw new Error(data.error || 'エラーが発生しました')
       }
     } catch (error) {
+      // AbortErrorは無視
+      if (error instanceof Error && error.name === 'AbortError') {
+        return
+      }
+      
       console.error('チャットエラー:', error)
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
