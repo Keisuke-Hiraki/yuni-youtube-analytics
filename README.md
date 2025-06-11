@@ -10,6 +10,7 @@ YuNiの動画パフォーマンスを人気度、エンゲージメント、再�
 - **レスポンシブデザイン**: モバイル・デスクトップ両対応
 - **ダークモード**: ライト/ダークテーマの切り替え
 - **詳細情報表示**: 動画の詳細情報をダイアログで表示
+- **AIチャットボット**: Groq APIを使用した動画検索・質問応答機能
 
 ## 🛠️ 技術スタック
 
@@ -19,13 +20,15 @@ YuNiの動画パフォーマンスを人気度、エンゲージメント、再�
 - **UIコンポーネント**: Radix UI
 - **チャート**: Recharts
 - **フォーム**: React Hook Form + Zod
-- **API**: YouTube Data API v3
+- **API**: YouTube Data API v3, Groq API
+- **AI**: Groq SDK (Llama 3.1 70B)
 
 ## 📋 前提条件
 
 - Node.js 18.0.0以上
 - pnpm (推奨) または npm
 - YouTube Data API v3のAPIキー
+- Groq APIキー（チャットボット機能用）
 
 ## 🚀 セットアップ
 
@@ -45,6 +48,7 @@ YuNiの動画パフォーマンスを人気度、エンゲージメント、再�
    `.env.local`ファイルを作成し、以下の環境変数を設定してください：
    ```env
    YOUTUBE_API_KEY=your_youtube_api_key_here
+   GROQ_API_KEY=your_groq_api_key_here
    ```
 
 4. **開発サーバーの起動**
@@ -58,6 +62,7 @@ YuNiの動画パフォーマンスを人気度、エンゲージメント、再�
 
 ```
 ├── app/                    # Next.js App Router
+│   ├── api/chat/          # チャットボットAPI
 │   ├── actions.ts         # Server Actions
 │   ├── globals.css        # グローバルスタイル
 │   ├── layout.tsx         # ルートレイアウト
@@ -66,6 +71,7 @@ YuNiの動画パフォーマンスを人気度、エンゲージメント、再�
 │   └── page.tsx           # メインページ
 ├── components/            # Reactコンポーネント
 │   ├── ui/               # 再利用可能なUIコンポーネント
+│   ├── chatbot/          # チャットボット関連コンポーネント
 │   ├── video-ranking.tsx # 動画ランキング表示
 │   ├── video-detail-dialog.tsx # 動画詳細ダイアログ
 │   ├── refresh-button.tsx # 更新ボタン
@@ -90,8 +96,20 @@ YuNiの動画パフォーマンスを人気度、エンゲージメント、再�
 ### Vercelでのデプロイ
 
 1. [Vercel](https://vercel.com)にプロジェクトをインポート
-2. 環境変数 `YOUTUBE_API_KEY` を設定
+2. 環境変数を設定:
+   - `YOUTUBE_API_KEY`: YouTube Data API v3のキー
+   - `GROQ_API_KEY`: Groq APIのキー
 3. デプロイを実行
+
+## 🤖 チャットボット機能
+
+画面左下のチャットボタンをクリックすると、AIアシスタントが利用できます：
+
+- **動画検索**: 「歌ってみた動画を教えて」「最新の動画は？」など
+- **統計情報**: 「一番人気の動画は？」「再生回数の多い動画は？」など
+- **質問応答**: YuNiの動画に関する様々な質問に回答
+
+チャットボットはGroq APIのLlama 3.1 70Bモデルを使用し、動画データベースから関連情報を検索して回答します。
 
 ## 📊 データ更新について
 

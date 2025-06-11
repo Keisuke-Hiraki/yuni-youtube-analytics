@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Toaster } from "@/components/toaster"
 import { LanguageProvider } from "@/lib/language-context"
+import { ChatButton } from "@/components/chatbot/chat-button"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -69,6 +70,7 @@ export default function RootLayout({
               <div className="flex-1">{children}</div>
               <SiteFooter />
             </div>
+            <ChatButton />
             <Toaster />
           </LanguageProvider>
         </ThemeProvider>
