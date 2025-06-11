@@ -42,14 +42,9 @@
     "clsx": "^2.1.1",
     "cmdk": "latest",
     "date-fns": "4.1.0",
-<<<<<<< HEAD
     "embla-carousel-react": "8.5.1",
     "groq-sdk": "^0.7.0",
     "input-otp": "1.4.1",
-=======
-    "embla-carousel-react": "latest",
-    "input-otp": "latest",
->>>>>>> 9716fada8fdf282111adb3f3cc900a94e1c316c0
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
     "next-themes": "latest",
