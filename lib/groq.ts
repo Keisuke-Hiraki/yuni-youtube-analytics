@@ -1,10 +1,17 @@
 import Groq from 'groq-sdk'
 import { YouTubeVideo } from './youtube'
 
+// 環境変数の確認
+const GROQ_API_KEY = process.env.GROQ_API_KEY
+
+if (!GROQ_API_KEY) {
+  console.error('GROQ_API_KEY環境変数が設定されていません')
+}
+
 // Groqクライアントの初期化
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-})
+const groq = GROQ_API_KEY ? new Groq({
+  apiKey: GROQ_API_KEY,
+}) : null
 
 // チャットメッセージの型定義
 export interface ChatMessage {
@@ -41,6 +48,12 @@ export async function generateChatResponse(
   chatHistory: ChatMessage[] = []
 ): Promise<string> {
   try {
+    // 環境変数が設定されていない場合の処理
+    if (!groq || !GROQ_API_KEY) {
+      console.error('Groq APIキーが設定されていません')
+      return 'チャットボット機能を利用するには、管理者にGROQ_API_KEYの設定を依頼してください。'
+    }
+
     // 関連する動画を検索
     const relevantVideos = searchVideos(videos, message)
     
@@ -81,6 +94,18 @@ ${relevantVideos.length > 0
     return completion.choices[0]?.message?.content || 'すみません、回答を生成できませんでした。'
   } catch (error) {
     console.error('Groq API エラー:', error)
+    
+    // より詳細なエラー情報を提供
+    if (error instanceof Error) {
+      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+        return 'APIキーが無効です。管理者にGROQ_API_KEYの確認を依頼してください。'
+      } else if (error.message.includes('429') || error.message.includes('rate limit')) {
+        return 'APIの利用制限に達しました。しばらく経ってからもう一度お試しください。'
+      } else if (error.message.includes('network') || error.message.includes('fetch')) {
+        return 'ネットワークエラーが発生しました。インターネット接続を確認してください。'
+      }
+    }
+    
     return 'すみません、現在チャットボットが利用できません。しばらく経ってからもう一度お試しください。'
   }
 } 

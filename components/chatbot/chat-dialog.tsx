@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { X, Send, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { ChatMessage } from '@/lib/groq'
 
@@ -92,23 +91,37 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md h-[600px] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            YuNi動画アシスタント
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="h-6 w-6 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      {/* オーバーレイ（背景クリックで閉じる） */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+      
+      {/* サイドパネル */}
+      <div className={`
+        fixed top-0 right-0 h-full w-full md:w-96 bg-background border-l shadow-lg z-50
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : 'translate-x-full'}
+        flex flex-col
+      `}>
+        {/* ヘッダー */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold">YuNi動画アシスタント</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
 
-        <div className="flex-1 pr-4 overflow-y-auto max-h-96">
+        {/* メッセージエリア */}
+        <div className="flex-1 overflow-y-auto p-4 chat-messages">
           <div className="space-y-4">
             {messages.map((message) => (
               <div
@@ -118,7 +131,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
                 }`}
               >
                 <div
-                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                     message.role === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted'
@@ -141,28 +154,31 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
           </div>
         </div>
 
-        <div className="flex gap-2 pt-4">
-          <Input
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="メッセージを入力..."
-            disabled={isLoading}
-            className="flex-1"
-          />
-          <Button
-            onClick={sendMessage}
-            disabled={!inputMessage.trim() || isLoading}
-            size="sm"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+        {/* 入力エリア */}
+        <div className="p-4 border-t">
+          <div className="flex gap-2">
+            <Input
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="メッセージを入力..."
+              disabled={isLoading}
+              className="flex-1"
+            />
+            <Button
+              onClick={sendMessage}
+              disabled={!inputMessage.trim() || isLoading}
+              size="sm"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </>
   )
 } 

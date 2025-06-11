@@ -55,6 +55,14 @@
   }
   body {
     @apply bg-background text-foreground;
+    transition: margin-right 300ms ease-in-out;
+  }
+
+  /* チャットパネルが開いている時のメインコンテンツ調整 */
+  @media (min-width: 768px) {
+    body.chat-panel-open {
+      margin-right: 24rem; /* w-96 = 24rem */
+    }
   }
 
   /* 画像の選択とドラッグを防止 */
@@ -109,4 +117,27 @@
   opacity: 0;
   transform: scale(0.95);
   transition: opacity 300ms, transform 300ms;
+}
+
+/* チャットパネル用のスタイル */
+.chat-panel-overlay {
+  backdrop-filter: blur(2px);
+}
+
+/* スクロールバーのスタイル調整 */
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
 }

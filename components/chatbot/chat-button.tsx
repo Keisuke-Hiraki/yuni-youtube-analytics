@@ -1,12 +1,26 @@
 "use client"
 
-import { useState } from 'react'
-import { MessageCircle, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatDialog } from './chat-dialog'
 
 export function ChatButton() {
   const [isOpen, setIsOpen] = useState(false)
+
+  // サイドパネルの開閉状態をbodyのクラスに反映
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('chat-panel-open')
+    } else {
+      document.body.classList.remove('chat-panel-open')
+    }
+
+    // クリーンアップ
+    return () => {
+      document.body.classList.remove('chat-panel-open')
+    }
+  }, [isOpen])
 
   return (
     <>
