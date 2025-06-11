@@ -12,71 +12,11 @@ export interface ChatMessage {
 // 動画データを検索用のテキストに変換
 function formatVideoForSearch(video: YouTubeVideo): string {
   return `タイトル: ${video.title}
-説明: ${video.description}
-再生回数: ${video.viewCount.toLocaleString()}回
+視聴回数: ${video.viewCount.toLocaleString()}回
 いいね数: ${video.likeCount.toLocaleString()}
+コメント数: ${video.commentCount.toLocaleString()}
 公開日: ${video.publishedAt}
 URL: https://www.youtube.com/watch?v=${video.id}`
-}
-
-// 動画データベースから関連する動画を検索
-export function searchVideos(videos: YouTubeVideo[], query: string): YouTubeVideo[] {
-  const searchTerms = query.toLowerCase().split(' ')
-  
-  // まず関連動画を検索
-  const relevantVideos = videos.filter(video => {
-    const searchText = `${video.title} ${video.description}`.toLowerCase()
-    return searchTerms.some(term => searchText.includes(term))
-  })
-  
-  // 検索結果が少ない場合は、より広範囲で検索
-  let finalVideos = relevantVideos
-  if (relevantVideos.length < 3) {
-    // 部分一致でも検索
-    const partialMatches = videos.filter(video => {
-      const searchText = `${video.title} ${video.description}`.toLowerCase()
-      return searchTerms.some(term => 
-        term.length > 2 && searchText.includes(term.substring(0, Math.max(2, term.length - 1)))
-      )
-    })
-    
-    // 重複を除去して結合
-    const combined = [...relevantVideos]
-    partialMatches.forEach(video => {
-      if (!combined.find(v => v.id === video.id)) {
-        combined.push(video)
-      }
-    })
-    finalVideos = combined
-  }
-  
-  // それでも少ない場合は人気動画を追加
-  if (finalVideos.length < 3) {
-    const popularVideos = [...videos]
-      .sort((a, b) => b.viewCount - a.viewCount)
-      .slice(0, 5)
-    
-    popularVideos.forEach(video => {
-      if (!finalVideos.find(v => v.id === video.id) && finalVideos.length < 5) {
-        finalVideos.push(video)
-      }
-    })
-  }
-  
-  // 最大5件まで
-  const result = finalVideos.slice(0, 5)
-  
-  // デバッグログ追加
-  console.log('動画検索デバッグ:', {
-    totalVideos: videos.length,
-    searchQuery: query,
-    searchTerms: searchTerms,
-    relevantVideos: relevantVideos.length,
-    finalVideos: result.length,
-    foundTitles: result.map(v => v.title)
-  })
-  
-  return result
 }
 
 // Groq APIを使用してチャット応答を生成
@@ -106,40 +46,35 @@ export async function generateChatResponse(
       apiKey: GROQ_API_KEY,
     })
 
-    // 関連する動画を検索
-    const relevantVideos = searchVideos(videos, message)
+    // 全ての動画情報をフォーマット
+    const allVideosData = videos.map(formatVideoForSearch).join('\n\n---\n\n')
     
-    // デバッグログ: 検索結果の確認
-    console.log('関連動画検索結果:', {
-      relevantVideosCount: relevantVideos.length,
-      relevantVideoTitles: relevantVideos.map(v => v.title)
+    // デバッグログ: 動画データの確認
+    console.log('全動画データ準備完了:', {
+      totalVideos: videos.length,
+      dataLength: allVideosData.length
     })
     
     // システムプロンプトを構築
-    const videoDataSection = relevantVideos.length > 0 
-      ? relevantVideos.map(formatVideoForSearch).join('\n\n---\n\n')
-      : '関連する動画が見つかりませんでした。一般的な情報で回答してください。'
-    
-    // デバッグログ: システムプロンプトの動画データ部分
-    console.log('システムプロンプト動画データ部分:', videoDataSection.substring(0, 500) + '...')
-    
     const systemPrompt = `あなたはYuNiというVTuberの動画情報アシスタントです。
-ユーザーの質問に対して、以下に提供された動画データを必ず参照して回答してください。
+ユーザーの質問に対して、以下に提供された全ての動画データを参照して回答してください。
 
-【重要】以下の動画データを必ず使用して回答してください：
-${videoDataSection}
+【重要】以下の動画データベースを使用して回答してください：
+${allVideosData}
 
 【回答ルール】
-1. 上記の動画データから関連する情報を必ず引用してください
-2. 動画のタイトル、再生回数、いいね数、公開日などの具体的な数値を含めてください
+1. 上記の動画データから関連する情報を引用してください
+2. 動画のタイトル、視聴回数、いいね数、コメント数、公開日などの具体的な数値を含めてください
 3. 動画のURLも提供してください
 4. 親しみやすく、丁寧な口調で回答してください
 5. 日本語で回答してください
-6. 動画データが提供されている場合は、一般的な情報ではなく、必ず提供されたデータに基づいて回答してください
+6. 質問に応じて適切な動画を選択して紹介してください
+7. 統計的な質問（最も人気、最新、など）には正確な数値で回答してください
 
 【禁止事項】
 - 提供された動画データを無視して一般的な回答をすること
-- 動画データがあるのに「情報がありません」と回答すること`
+- 動画データがあるのに「情報がありません」と回答すること
+- 不正確な数値や情報を提供すること`
 
     // チャット履歴を含めたメッセージを構築
     const messages = [
