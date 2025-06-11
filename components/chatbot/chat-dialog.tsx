@@ -86,7 +86,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
         }
         setMessages(prev => [...prev, assistantMessage])
       } else {
-        throw new Error(data.error || 'エラーが発生しました')
+        throw new Error(data.error || `HTTPエラー: ${response.status}`)
       }
     } catch (error) {
       // AbortErrorは無視
@@ -95,10 +95,31 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
       }
       
       console.error('チャットエラー:', error)
+      
+      // エラーの詳細情報を含むメッセージを作成
+      let errorContent = 'エラーが発生しました。\n\n'
+      
+      if (error instanceof Error) {
+        errorContent += `エラー名: ${error.name}\n`
+        errorContent += `エラーメッセージ: ${error.message}\n`
+        
+        if (error.message.includes('fetch')) {
+          errorContent += '\n原因: ネットワーク接続の問題またはサーバーエラー'
+        } else if (error.message.includes('401')) {
+          errorContent += '\n原因: APIキーが無効または未設定'
+        } else if (error.message.includes('429')) {
+          errorContent += '\n原因: APIの利用制限に達しました'
+        }
+      } else {
+        errorContent += `エラー内容: ${String(error)}`
+      }
+      
+      errorContent += '\n\n開発者コンソールで詳細を確認してください。'
+      
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'すみません、エラーが発生しました。もう一度お試しください。',
+        content: errorContent,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])
