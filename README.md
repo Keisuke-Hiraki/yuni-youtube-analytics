@@ -30,33 +30,33 @@ YuNiの動画パフォーマンスを人気度、エンゲージメント、再�
 ## 🚀 セットアップ
 
 1. **リポジトリのクローン**
-   \`\`\`bash
+   ```bash
    git clone https://github.com/your-username/yuni-youtube-analytics.git
    cd yuni-youtube-analytics
-   \`\`\`
+   ```
 
 2. **依存関係のインストール**
-   \`\`\`bash
+   ```bash
    pnpm install
-   \`\`\`
+   ```
 
 3. **環境変数の設定**
    
    `.env.local`ファイルを作成し、以下の環境変数を設定してください：
-   \`\`\`env
+   ```env
    YOUTUBE_API_KEY=your_youtube_api_key_here
-   \`\`\`
+   ```
 
 4. **開発サーバーの起動**
-   \`\`\`bash
+   ```bash
    pnpm dev
-   \`\`\`
+   ```
 
    ブラウザで [http://localhost:3000](http://localhost:3000) を開いてアプリケーションを確認できます。
 
 ## 📁 プロジェクト構造
 
-\`\`\`
+```
 ├── app/                    # Next.js App Router
 │   ├── actions.ts         # Server Actions
 │   ├── globals.css        # グローバルスタイル
@@ -74,7 +74,7 @@ YuNiの動画パフォーマンスを人気度、エンゲージメント、再�
 ├── hooks/                # カスタムフック
 ├── styles/               # スタイルファイル
 └── public/               # 静的ファイル
-\`\`\`
+```
 
 ## 🔧 利用可能なスクリプト
 
