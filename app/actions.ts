@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache"
 import { debugLog, debugError } from '@/lib/utils'
 
 // YuNiさんのチャンネルID
-const CHANNEL_ID = "UCHTnX0CSX_KObo5I9WuZ64g"
+const CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID!
 
 // チャンネル情報の型定義
 export interface ChannelInfo {

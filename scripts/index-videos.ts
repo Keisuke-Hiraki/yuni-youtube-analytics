@@ -5,7 +5,7 @@ import { getChannelVideos } from '../lib/youtube'
 import { debugLog, debugError } from '../lib/utils'
 
 // YuNiのチャンネルID
-const YUNI_CHANNEL_ID = 'UCYbOutLY_XGz4XjTdPKpxhA'
+const YUNI_CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID!
 
 async function main() {
   try {
