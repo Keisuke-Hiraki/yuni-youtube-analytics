@@ -1,6 +1,7 @@
 import Groq from 'groq-sdk'
 import { YouTubeVideo } from './youtube'
 import { debugLog, debugError } from '@/lib/utils'
+import { indexVideos, searchVideos, searchVideosForStats } from './vector-db'
 
 // チャットメッセージの型定義
 export interface ChatMessage {
@@ -47,6 +48,18 @@ function analyzeQueryType(message: string): 'statistical' | 'search' | 'recent' 
   return 'general'
 }
 
+// 年を抽出する関数
+function extractYear(message: string): number | undefined {
+  const yearMatch = message.match(/(\d{4})年?/)
+  if (yearMatch) {
+    const year = parseInt(yearMatch[1])
+    if (year >= 2000 && year <= new Date().getFullYear()) {
+      return year
+    }
+  }
+  return undefined
+}
+
 // 動画データを圧縮形式で変換
 function formatVideoCompact(video: YouTubeVideo): string {
   const date = video.publishedAt.split('T')[0]
@@ -58,10 +71,101 @@ function formatVideoForStats(video: YouTubeVideo): string {
   return `${video.title}|再生:${video.viewCount}|いいね:${video.likeCount}|コメント:${video.commentCount}|日付:${video.publishedAt.split('T')[0]}`
 }
 
-// データを適切に選択・フォーマットする関数
-function prepareVideoData(videos: YouTubeVideo[], message: string) {
+// RAGを使用してデータを適切に選択・フォーマットする関数
+async function prepareVideoDataWithRAG(videos: YouTubeVideo[], message: string) {
   const queryType = analyzeQueryType(message)
   
+  try {
+    // まずVector DBにインデックス（必要に応じて）
+    await indexVideos(videos)
+    
+    switch (queryType) {
+      case 'statistical':
+        // 統計的質問：RAGで関連動画を検索し、年でフィルタリング
+        const year = extractYear(message)
+        const statsVideos = await searchVideosForStats(message, year)
+        
+        if (statsVideos.length === 0) {
+          // RAGで見つからない場合は従来の方法にフォールバック
+          return prepareVideoDataFallback(videos, message, queryType)
+        }
+        
+        // 統計処理用にソート
+        let sortedVideos = [...statsVideos]
+        if (message.includes('少ない') || message.includes('最小')) {
+          sortedVideos.sort((a, b) => a.viewCount - b.viewCount)
+        } else {
+          sortedVideos.sort((a, b) => b.viewCount - a.viewCount)
+        }
+        
+        const statsData = sortedVideos
+          .slice(0, 50) // 上位50件に制限
+          .map(formatVideoForStats)
+          .join('\n')
+        
+        return {
+          data: statsData,
+          count: sortedVideos.length,
+          type: 'statistical',
+          source: 'rag'
+        }
+        
+      case 'search':
+        // 検索質問：RAGで意味的に関連する動画を検索
+        const ragSearchVideos = await searchVideos(message, 30)
+        
+        if (ragSearchVideos.length === 0) {
+          return prepareVideoDataFallback(videos, message, queryType)
+        }
+        
+        return {
+          data: ragSearchVideos.map(formatVideoCompact).join('\n'),
+          count: ragSearchVideos.length,
+          type: 'search',
+          source: 'rag'
+        }
+        
+      case 'recent':
+        // 最新情報：RAGで検索してから日付順でソート
+        const recentSearchVideos = await searchVideos(message, 50)
+        const recentVideos = recentSearchVideos
+          .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+          .slice(0, 30)
+        
+        if (recentVideos.length === 0) {
+          return prepareVideoDataFallback(videos, message, queryType)
+        }
+        
+        return {
+          data: recentVideos.map(formatVideoCompact).join('\n'),
+          count: recentVideos.length,
+          type: 'recent',
+          source: 'rag'
+        }
+        
+      default:
+        // 一般的質問：RAGで関連動画を検索
+        const generalVideos = await searchVideos(message, 30)
+        
+        if (generalVideos.length === 0) {
+          return prepareVideoDataFallback(videos, message, queryType)
+        }
+        
+        return {
+          data: generalVideos.map(formatVideoCompact).join('\n'),
+          count: generalVideos.length,
+          type: 'general',
+          source: 'rag'
+        }
+    }
+  } catch (error) {
+    debugError('RAG検索エラー、フォールバックを使用:', error)
+    return prepareVideoDataFallback(videos, message, queryType)
+  }
+}
+
+// フォールバック用の従来の方法
+function prepareVideoDataFallback(videos: YouTubeVideo[], message: string, queryType: string) {
   switch (queryType) {
     case 'statistical':
       // 統計的質問：データを年ごとにグループ化して要約
@@ -78,7 +182,7 @@ function prepareVideoData(videos: YouTubeVideo[], message: string) {
         // 各年のトップ10のみ含める
         const topVideos = yearVideos
           .sort((a, b) => b.viewCount - a.viewCount)
-          .slice(0, 100)
+          .slice(0, 10)
         
         statsData += `\n${year}年の動画:\n`
         statsData += topVideos.map(formatVideoForStats).join('\n')
@@ -88,7 +192,8 @@ function prepareVideoData(videos: YouTubeVideo[], message: string) {
       return {
         data: statsData,
         count: videos.length,
-        type: 'statistical'
+        type: 'statistical',
+        source: 'fallback'
       }
       
     case 'search':
@@ -102,7 +207,8 @@ function prepareVideoData(videos: YouTubeVideo[], message: string) {
       return {
         data: relevantVideos.map(formatVideoCompact).join('\n'),
         count: relevantVideos.length,
-        type: 'search'
+        type: 'search',
+        source: 'fallback'
       }
       
     case 'recent':
@@ -114,7 +220,8 @@ function prepareVideoData(videos: YouTubeVideo[], message: string) {
       return {
         data: recentVideos.map(formatVideoCompact).join('\n'),
         count: recentVideos.length,
-        type: 'recent'
+        type: 'recent',
+        source: 'fallback'
       }
       
     default:
@@ -126,7 +233,8 @@ function prepareVideoData(videos: YouTubeVideo[], message: string) {
       return {
         data: popularVideos.map(formatVideoCompact).join('\n'),
         count: popularVideos.length,
-        type: 'general'
+        type: 'general',
+        source: 'fallback'
       }
   }
 }
@@ -163,13 +271,14 @@ export async function generateChatResponse(
       apiKey: GROQ_API_KEY,
     })
 
-    // 質問タイプに応じてデータを準備
-    const { data: videoData, count, type } = prepareVideoData(videos, message)
+    // RAGを使用してデータを準備
+    const { data: videoData, count, type, source } = await prepareVideoDataWithRAG(videos, message)
     
     debugLog('データ準備完了:', {
       queryType: type,
       selectedCount: count,
-      dataLength: videoData.length
+      dataLength: videoData.length,
+      source: source
     })
 
     // システムプロンプトを構築
@@ -183,7 +292,8 @@ ${videoData}
 - 統計的質問には正確な数値で答える
 - 動画のタイトルとURLを含める
 - 親しみやすく日本語で回答
-- データにない情報は推測しない`
+- データにない情報は推測しない
+- 検索結果は${source === 'rag' ? 'AI検索システム' : '従来の検索'}を使用して取得されました`
 
     // メッセージを構築（履歴を制限）
     const messages = [
