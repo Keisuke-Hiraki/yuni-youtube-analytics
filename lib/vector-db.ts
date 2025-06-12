@@ -4,13 +4,29 @@ import { YouTubeVideo } from './youtube'
 import { debugLog, debugError } from './utils'
 
 // Upstash Vector DBクライアントの初期化
-const vectorIndex = new Index({
-  url: process.env.UPSTASH_VECTOR_REST_URL!,
-  token: process.env.UPSTASH_VECTOR_REST_TOKEN!,
-})
+let vectorIndex: Index | null = null
+
+try {
+  if (process.env.UPSTASH_VECTOR_REST_URL && process.env.UPSTASH_VECTOR_REST_TOKEN) {
+    vectorIndex = new Index({
+      url: process.env.UPSTASH_VECTOR_REST_URL!,
+      token: process.env.UPSTASH_VECTOR_REST_TOKEN!,
+    })
+  }
+} catch (error) {
+  debugError('Vector DB初期化エラー:', error)
+}
 
 // Google Gemini APIクライアントの初期化
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+let genAI: GoogleGenerativeAI | null = null
+
+try {
+  if (process.env.GEMINI_API_KEY) {
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+  }
+} catch (error) {
+  debugError('Gemini API初期化エラー:', error)
+}
 
 // タイムスタンプ管理用の特別なID
 const TIMESTAMP_ID = '__last_update_timestamp__'
@@ -39,9 +55,9 @@ URL: https://www.youtube.com/watch?v=${video.id}`
 // Gemini APIを使用してテキストの埋め込みを生成
 async function generateEmbedding(text: string): Promise<number[]> {
   try {
-    const model = genAI.getGenerativeModel({ model: 'text-embedding-004' })
-    const result = await model.embedContent(text)
-    return result.embedding.values
+    const model = genAI?.getGenerativeModel({ model: 'text-embedding-004' })
+    const result = await model?.embedContent(text)
+    return result?.embedding.values || []
   } catch (error) {
     debugError('Gemini API埋め込み生成エラー:', error)
     throw new Error(`埋め込み生成に失敗しました: ${error}`)
@@ -51,7 +67,7 @@ async function generateEmbedding(text: string): Promise<number[]> {
 // 最後の更新時刻を確認
 async function getLastUpdateTime(): Promise<Date | null> {
   try {
-    const result = await vectorIndex.fetch([TIMESTAMP_ID])
+    const result = await vectorIndex?.fetch([TIMESTAMP_ID])
     if (result && result.length > 0 && result[0]?.metadata) {
       const timestamp = result[0].metadata.timestamp as string
       return new Date(timestamp)
@@ -70,7 +86,7 @@ async function updateTimestamp(): Promise<void> {
     // ダミーの埋め込みベクトル（768次元）
     const dummyVector = new Array(768).fill(0)
     
-    await vectorIndex.upsert([{
+    await vectorIndex?.upsert([{
       id: TIMESTAMP_ID,
       vector: dummyVector,
       metadata: {
@@ -116,6 +132,11 @@ async function shouldUpdate(): Promise<boolean> {
 // 動画データをVector DBにインデックス
 export async function indexVideos(videos: YouTubeVideo[]): Promise<void> {
   try {
+    if (!vectorIndex || !genAI) {
+      debugLog('Vector DBまたはGemini APIが初期化されていないため、インデックスをスキップします')
+      return
+    }
+    
     debugLog('Vector DB更新チェック開始')
     
     // 更新が必要かチェック
@@ -131,7 +152,7 @@ export async function indexVideos(videos: YouTubeVideo[]): Promise<void> {
       // 全てのベクトルIDを取得して削除
       const existingIds = videos.map(v => v.id)
       if (existingIds.length > 0) {
-        await vectorIndex.delete(existingIds)
+        await vectorIndex?.delete(existingIds)
         debugLog('既存データ削除完了')
       }
     } catch (deleteError) {
@@ -188,7 +209,7 @@ export async function indexVideos(videos: YouTubeVideo[]): Promise<void> {
       }
       
       if (vectors.length > 0) {
-        await vectorIndex.upsert(vectors)
+        await vectorIndex?.upsert(vectors)
         debugLog(`バッチ ${batchIndex + 1} 完了: ${vectors.length}件`)
       }
       
@@ -209,24 +230,29 @@ export async function indexVideos(videos: YouTubeVideo[]): Promise<void> {
 // ベクトル検索を実行
 export async function searchVideos(query: string, topK: number = 20): Promise<YouTubeVideo[]> {
   try {
+    if (!vectorIndex || !genAI) {
+      debugLog('Vector DBまたはGemini APIが初期化されていないため、空の結果を返します')
+      return []
+    }
+    
     debugLog('ベクトル検索開始:', { query: query.substring(0, 100), topK })
     
     // クエリの埋め込みを生成
     const queryEmbedding = await generateEmbedding(query)
     
     // ベクトル検索を実行
-    const results = await vectorIndex.query({
+    const results = await vectorIndex?.query({
       vector: queryEmbedding,
       topK,
       includeMetadata: true,
       filter: `type = 'video'`
     })
     
-    debugLog('検索結果:', { resultsCount: results.length })
+    debugLog('検索結果:', { resultsCount: results?.length || 0 })
     
     // 結果をYouTubeVideo形式に変換
     const videos: YouTubeVideo[] = results
-      .filter((result: any) => result.metadata && result.score && result.score > 0.7) // 類似度フィルタ
+      ?.filter((result: any) => result.metadata && result.score && result.score > 0.7) // 類似度フィルタ
       .map((result: any) => ({
         id: result.id,
         title: result.metadata!.title as string,
@@ -239,7 +265,7 @@ export async function searchVideos(query: string, topK: number = 20): Promise<Yo
         duration: result.metadata!.duration as string,
         isLiveContent: result.metadata!.isLiveContent as boolean,
         isShort: result.metadata!.isShort as boolean,
-      }))
+      })) || []
     
     debugLog('変換完了:', { videosCount: videos.length })
     return videos
@@ -252,23 +278,28 @@ export async function searchVideos(query: string, topK: number = 20): Promise<Yo
 // 統計的クエリ用の特別な検索
 export async function searchVideosForStats(query: string, year?: number): Promise<YouTubeVideo[]> {
   try {
+    if (!vectorIndex || !genAI) {
+      debugLog('Vector DBまたはGemini APIが初期化されていないため、空の結果を返します')
+      return []
+    }
+    
     debugLog('統計検索開始:', { query: query.substring(0, 100), year })
     
     // より多くの結果を取得して統計処理
     const queryEmbedding = await generateEmbedding(query)
     
-    const results = await vectorIndex.query({
+    const results = await vectorIndex?.query({
       vector: queryEmbedding,
       topK: 100, // 統計用により多くのデータを取得
       includeMetadata: true,
       filter: year ? `type = 'video' AND publishYear = ${year}` : `type = 'video'`
     })
     
-    debugLog('統計検索結果:', { resultsCount: results.length })
+    debugLog('統計検索結果:', { resultsCount: results?.length || 0 })
     
     // 結果をYouTubeVideo形式に変換
     const videos: YouTubeVideo[] = results
-      .filter((result: any) => result.metadata && result.score && result.score > 0.5) // 統計用は閾値を下げる
+      ?.filter((result: any) => result.metadata && result.score && result.score > 0.5) // 統計用は閾値を下げる
       .map((result: any) => ({
         id: result.id,
         title: result.metadata!.title as string,
@@ -281,7 +312,7 @@ export async function searchVideosForStats(query: string, year?: number): Promis
         duration: result.metadata!.duration as string,
         isLiveContent: result.metadata!.isLiveContent as boolean,
         isShort: result.metadata!.isShort as boolean,
-      }))
+      })) || []
     
     return videos
   } catch (error) {
@@ -301,12 +332,12 @@ export async function getIndexStatus(): Promise<{
     const shouldUpdateFlag = await shouldUpdate()
     
     // ベクトル数を取得（概算）
-    const stats = await vectorIndex.info()
+    const stats = await vectorIndex?.info()
     
     return {
       lastUpdate,
       shouldUpdate: shouldUpdateFlag,
-      totalVectors: stats.vectorCount || 0
+      totalVectors: stats?.vectorCount || 0
     }
   } catch (error) {
     debugError('インデックス状態確認エラー:', error)

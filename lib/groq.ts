@@ -75,9 +75,21 @@ function formatVideoForStats(video: YouTubeVideo): string {
 async function prepareVideoDataWithRAG(videos: YouTubeVideo[], message: string) {
   const queryType = analyzeQueryType(message)
   
+  // RAGシステムが利用可能かチェック
+  const isRAGAvailable = process.env.GEMINI_API_KEY && 
+                        process.env.UPSTASH_VECTOR_REST_URL && 
+                        process.env.UPSTASH_VECTOR_REST_TOKEN
+  
+  if (!isRAGAvailable) {
+    debugLog('RAG環境変数が設定されていないため、フォールバックを使用')
+    return prepareVideoDataFallback(videos, message, queryType)
+  }
+  
   try {
     // まずVector DBにインデックス（必要に応じて）
+    debugLog('Vector DB インデックス試行中...')
     await indexVideos(videos)
+    debugLog('Vector DB インデックス完了')
     
     switch (queryType) {
       case 'statistical':
@@ -160,6 +172,17 @@ async function prepareVideoDataWithRAG(videos: YouTubeVideo[], message: string) 
     }
   } catch (error) {
     debugError('RAG検索エラー、フォールバックを使用:', error)
+    
+    // エラーの詳細をログに記録
+    if (error instanceof Error) {
+      debugError('RAGエラー詳細:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      })
+    }
+    
+    debugLog('フォールバック処理を開始')
     return prepareVideoDataFallback(videos, message, queryType)
   }
 }
