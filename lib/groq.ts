@@ -78,7 +78,7 @@ function prepareVideoData(videos: YouTubeVideo[], message: string) {
         // 各年のトップ10のみ含める
         const topVideos = yearVideos
           .sort((a, b) => b.viewCount - a.viewCount)
-          .slice(0, 10)
+          .slice(0, 100)
         
         statsData += `\n${year}年の動画:\n`
         statsData += topVideos.map(formatVideoForStats).join('\n')
