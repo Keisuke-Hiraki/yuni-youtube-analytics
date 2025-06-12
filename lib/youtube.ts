@@ -52,29 +52,31 @@ export function getViewCountTag(viewCount: number): ViewCountTag | null {
   return null
 }
 
+import { debugLog, debugError } from '@/lib/utils'
+
 /**
  * YouTube動画がShort動画か通常動画かを判定する
  * @param {string} videoId - 判定対象の動画ID
  * @returns {Promise<boolean>} - Short動画の場合はtrue、それ以外はfalse
  */
 async function isYouTubeShort(videoId: string): Promise<boolean> {
-  const url = `https://youtube.com/shorts/${videoId}`
   try {
-    // リダイレクトを追跡する設定
-    const response = await fetch(url, {
+    // YouTube Shortsの場合、通常のwatch URLにアクセスするとshortsページにリダイレクトされる
+    const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
       method: "HEAD",
-      redirect: "follow",
-      cache: "no-store", // キャッシュを完全に無効化
+      redirect: "manual", // リダイレクトを手動で処理
     })
-    // レスポンスURLが/shorts/を含む場合はShort動画
-    if (response.url.includes("/shorts/")) {
-      return true // Short動画
+
+    // リダイレクト先のURLを確認
+    const location = response.headers.get("location")
+    if (location && location.includes("/shorts/")) {
+      return true
     }
-    // それ以外の場合は通常動画
+
     return false
   } catch (error) {
-    console.error("⛔️ isShort関数内でエラーが発生:", error)
-    return false // 判定できない場合は通常動画として扱う
+    debugError("⛔️ isShort関数内でエラーが発生:", error)
+    return false
   }
 }
 
@@ -122,15 +124,15 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
     // ページネーションを使用して全ての動画を取得（最大maxResults件まで）
     do {
       const pageSize = Math.min(50, maxResults - totalFetched) // 1回のリクエストで最大50件
-      const pageUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=${pageSize}&playlistId=${uploadsPlaylistId}&key=${process.env.YOUTUBE_API_KEY}${nextPageToken ? `&pageToken=${nextPageToken}` : ""}&_t=${timestamp}`
+      const pageUrl: string = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=${pageSize}&playlistId=${uploadsPlaylistId}&key=${process.env.YOUTUBE_API_KEY}${nextPageToken ? `&pageToken=${nextPageToken}` : ""}&_t=${timestamp}`
 
-      const playlistResponse = await fetch(pageUrl, { cache: "no-store" })
+      const playlistResponse: Response = await fetch(pageUrl, { cache: "no-store" })
 
       if (!playlistResponse.ok) {
         throw new Error(`プレイリスト情報の取得に失敗: ${playlistResponse.status} ${playlistResponse.statusText}`)
       }
 
-      const playlistData = await playlistResponse.json()
+      const playlistData: any = await playlistResponse.json()
 
       if (!playlistData.items || playlistData.items.length === 0) {
         break
@@ -195,10 +197,9 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
           const likeCount = statistics.likeCount ? Number.parseInt(statistics.likeCount, 10) : 0
           const commentCount = statistics.commentCount ? Number.parseInt(statistics.commentCount, 10) : 0
 
-          // デバッグ用に生の値と変換後の値をログ出力
+          // デバッグ用に生の値と変換後の値をログ出力（最初の動画のみ）
           if (item.id === videoIds[0]) {
-            // 最初の動画だけログ出力
-            console.log(`動画ID ${item.id} の統計情報:`, {
+            debugLog(`動画ID ${item.id} の統計情報:`, {
               rawViewCount: statistics.viewCount,
               parsedViewCount: viewCount,
               rawLikeCount: statistics.likeCount,
@@ -229,7 +230,7 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
 
     return allVideos
   } catch (error) {
-    console.error("YouTube APIエラー:", error)
+    debugError("YouTube APIエラー:", error)
     return []
   }
 }

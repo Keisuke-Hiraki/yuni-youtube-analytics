@@ -1,10 +1,17 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
-import { X, Send, Loader2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ChatMessage } from '@/lib/groq'
+import { X, Send, Loader2 } from 'lucide-react'
+import { debugLog, debugError } from '@/lib/utils'
+
+interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+}
 
 interface ChatDialogProps {
   isOpen: boolean
@@ -31,7 +38,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
     }
   }, [isOpen, messages.length])
 
-  // コンポーネントのクリーンアップ
+  // コンポーネントがアンマウントされる際にリクエストをキャンセル
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -40,10 +47,18 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
     }
   }, [])
 
+  // ダイアログが閉じられる際にリクエストをキャンセル
+  useEffect(() => {
+    if (!isOpen && abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      setIsLoading(false)
+    }
+  }, [isOpen])
+
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return
 
-    // 前のリクエストをキャンセル
+    // 既存のリクエストをキャンセル
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
@@ -65,12 +80,12 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
     try {
       // デバッグ: まずGETエンドポイントをテスト
       if (inputMessage.toLowerCase().includes('test api')) {
-        console.log('APIテストを実行中...')
+        debugLog('APIテストを実行中...')
         const testResponse = await fetch('/api/chat', {
           method: 'GET',
         })
         const testData = await testResponse.text()
-        console.log('APIテスト結果:', {
+        debugLog('APIテスト結果:', {
           status: testResponse.status,
           data: testData
         })
@@ -86,7 +101,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
         return
       }
 
-      console.log('POSTリクエスト送信中...')
+      debugLog('POSTリクエスト送信中...')
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -101,7 +116,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
 
       // レスポンスの内容を確認
       const responseText = await response.text()
-      console.log('APIレスポンス:', {
+      debugLog('APIレスポンス:', {
         status: response.status,
         statusText: response.statusText,
         headers: Object.fromEntries(response.headers.entries()),
@@ -112,8 +127,8 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
       try {
         data = JSON.parse(responseText)
       } catch (parseError) {
-        console.error('JSONパースエラー:', parseError)
-        console.error('レスポンステキスト:', responseText)
+        debugError('JSONパースエラー:', parseError)
+        debugError('レスポンステキスト:', responseText)
         throw new Error(`サーバーから無効なレスポンスが返されました: ${responseText.substring(0, 100)}`)
       }
 
@@ -134,27 +149,42 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
         return
       }
       
-      console.error('チャットエラー:', error)
+      debugError('チャットエラー:', error)
       
       // エラーの詳細情報を含むメッセージを作成
-      let errorContent = 'エラーが発生しました。\n\n'
+      let errorContent = ''
       
       if (error instanceof Error) {
-        errorContent += `エラー名: ${error.name}\n`
-        errorContent += `エラーメッセージ: ${error.message}\n`
+        // Groq公式ドキュメントに基づくエラーハンドリング
+        // https://console.groq.com/docs/errors
         
-        if (error.message.includes('fetch')) {
-          errorContent += '\n原因: ネットワーク接続の問題またはサーバーエラー'
-        } else if (error.message.includes('401')) {
-          errorContent += '\n原因: APIキーが無効または未設定'
-        } else if (error.message.includes('429')) {
-          errorContent += '\n原因: APIの利用制限に達しました'
+        if (error.message.includes('429') || error.message.includes('Too Many Requests')) {
+          // レート制限の場合は、サーバーからの親切なメッセージをそのまま使用
+          errorContent = error.message
+        } else if (error.message.includes('498') || error.message.includes('Flex Tier Capacity Exceeded')) {
+          // Flex Tier容量超過の場合も、サーバーからのメッセージを使用
+          errorContent = error.message
+        } else if (error.message.includes('413') || error.message.includes('Request Entity Too Large')) {
+          errorContent = '送信されたメッセージが長すぎます。質問を短くしてもう一度お試しください。'
+        } else if (error.message.includes('422') || error.message.includes('Unprocessable Entity')) {
+          errorContent = 'リクエストの内容に問題があります。質問を見直してもう一度お試しください。'
+        } else if (error.message.includes('fetch')) {
+          errorContent = 'ネットワーク接続の問題が発生しました。インターネット接続を確認してから、もう一度お試しください。'
+        } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          errorContent = 'APIキーが無効または未設定です。管理者にお問い合わせください。'
+        } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+          errorContent = 'サーバー内部エラーが発生しました。しばらく経ってからもう一度お試しください。'
+        } else if (error.message.includes('502') || error.message.includes('Bad Gateway')) {
+          errorContent = 'サーバー接続エラーが発生しました。しばらく経ってからもう一度お試しください。'
+        } else if (error.message.includes('503') || error.message.includes('Service Unavailable')) {
+          errorContent = 'サービスが一時的に利用できません。メンテナンス中の可能性があります。しばらく経ってからもう一度お試しください。'
+        } else {
+          // その他のエラーの場合は詳細情報を表示
+          errorContent = `エラーが発生しました。\n\nエラー名: ${error.name}\nエラーメッセージ: ${error.message}\n\n開発者コンソールで詳細を確認してください。`
         }
       } else {
-        errorContent += `エラー内容: ${String(error)}`
+        errorContent = `予期しないエラーが発生しました。\n\nエラー内容: ${String(error)}`
       }
-      
-      errorContent += '\n\n開発者コンソールで詳細を確認してください。'
       
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),

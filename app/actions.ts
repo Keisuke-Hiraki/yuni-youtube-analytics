@@ -2,6 +2,7 @@
 
 import { getChannelVideos, type YouTubeVideo } from "@/lib/youtube"
 import { revalidatePath } from "next/cache"
+import { debugLog, debugError } from '@/lib/utils'
 
 // YuNiさんのチャンネルID
 const CHANNEL_ID = "UCHTnX0CSX_KObo5I9WuZ64g"
@@ -30,17 +31,17 @@ export async function getChannelInfo(): Promise<ChannelInfo | null> {
     )
 
     if (!response.ok) {
-      console.error(`API応答エラー: ${response.status} ${response.statusText}`)
+      debugError(`API応答エラー: ${response.status} ${response.statusText}`)
       return null
     }
 
     const data = await response.json()
 
     // デバッグ用にレスポンスの内容をログに出力
-    console.log("チャンネル情報API応答:", JSON.stringify(data, null, 2))
+    debugLog("チャンネル情報API応答:", JSON.stringify(data, null, 2))
 
     if (!data.items || data.items.length === 0) {
-      console.error("チャンネル情報が見つかりません")
+      debugError("チャンネル情報が見つかりません")
       return null
     }
 
@@ -48,12 +49,12 @@ export async function getChannelInfo(): Promise<ChannelInfo | null> {
 
     // statistics オブジェクトの存在確認
     if (!channel.statistics) {
-      console.error("統計情報が見つかりません:", channel)
+      debugError("統計情報が見つかりません:", channel)
       return null
     }
 
     // 生のデータをログに出力
-    console.log("生の統計情報:", channel.statistics)
+    debugLog("生の統計情報:", channel.statistics)
 
     // 各統計値の存在確認とパース処理の改善
     const subscriberCount = channel.statistics.subscriberCount
@@ -65,7 +66,7 @@ export async function getChannelInfo(): Promise<ChannelInfo | null> {
     const videoCount = channel.statistics.videoCount ? Number.parseInt(channel.statistics.videoCount, 10) : 0
 
     // デバッグ用に変換後の値をログに出力
-    console.log("パース後の統計情報:", {
+    debugLog("パース後の統計情報:", {
       subscriberCount,
       viewCount,
       videoCount,
@@ -82,7 +83,7 @@ export async function getChannelInfo(): Promise<ChannelInfo | null> {
       thumbnailUrl: channel.snippet.thumbnails.high?.url || channel.snippet.thumbnails.default?.url,
     }
   } catch (error) {
-    console.error("チャンネル情報取得エラー:", error)
+    debugError("チャンネル情報取得エラー:", error)
     return null
   }
 }
@@ -92,10 +93,10 @@ async function calculateTotalViewCount(videos: YouTubeVideo[]): Promise<number> 
   try {
     // 全動画の再生回数を合計
     const totalViews = videos.reduce((total, video) => total + video.viewCount, 0)
-    console.log(`計算された総再生回数: ${totalViews} (${videos.length}件の動画から)`)
+    debugLog(`計算された総再生回数: ${totalViews} (${videos.length}件の動画から)`)
     return totalViews
   } catch (error) {
-    console.error("総再生回数計算エラー:", error)
+    debugError("総再生回数計算エラー:", error)
     return 0
   }
 }
@@ -117,7 +118,7 @@ export async function fetchYuNiVideos(): Promise<{
 
     // チャンネル情報が取得できなかった場合のログ
     if (!channelInfo) {
-      console.error("チャンネル情報の取得に失敗しました")
+      debugError("チャンネル情報の取得に失敗しました")
       // 最小限のチャンネル情報を作成
       channelInfo = {
         id: CHANNEL_ID,
@@ -132,7 +133,7 @@ export async function fetchYuNiVideos(): Promise<{
 
     // APIから取得した総再生回数が0の場合、代替計算を使用
     if (channelInfo.viewCount === 0) {
-      console.log("APIから取得した総再生回数が0のため、代替計算を使用します")
+      debugLog("APIから取得した総再生回数が0のため、代替計算を使用します")
       const calculatedViewCount = await calculateTotalViewCount(videos)
 
       // 計算した値で更新
@@ -142,7 +143,7 @@ export async function fetchYuNiVideos(): Promise<{
       }
     }
 
-    console.log("最終的なチャンネル情報:", {
+    debugLog("最終的なチャンネル情報:", {
       title: channelInfo.title,
       subscriberCount: channelInfo.subscriberCount,
       viewCount: channelInfo.viewCount,
@@ -159,7 +160,7 @@ export async function fetchYuNiVideos(): Promise<{
       channelInfo,
     }
   } catch (error) {
-    console.error("動画取得エラー:", error)
+    debugError("動画取得エラー:", error)
     return {
       videos: [],
       error: "動画データの取得に失敗しました。しばらく経ってからもう一度お試しください。",
@@ -190,7 +191,7 @@ export async function refreshVideoData(): Promise<{
       message: "動画データを更新しました",
     }
   } catch (error) {
-    console.error("キャッシュ更新エラー:", error)
+    debugError("キャッシュ更新エラー:", error)
     return {
       success: false,
       message: "データの更新に失敗しました",

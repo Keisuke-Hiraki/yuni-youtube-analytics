@@ -1,5 +1,6 @@
-import { Groq } from 'groq-sdk'
+import Groq from 'groq-sdk'
 import { YouTubeVideo } from './youtube'
+import { debugLog, debugError } from '@/lib/utils'
 
 // チャットメッセージの型定義
 export interface ChatMessage {
@@ -146,7 +147,7 @@ export async function generateChatResponse(
   chatHistory: ChatMessage[] = []
 ): Promise<string> {
   try {
-    console.log('チャット応答生成開始:', {
+    debugLog('チャット応答生成開始:', {
       message: message,
       videosCount: videos.length
     })
@@ -154,7 +155,7 @@ export async function generateChatResponse(
     const GROQ_API_KEY = process.env.GROQ_API_KEY
     
     if (!GROQ_API_KEY) {
-      console.error('Groq APIキーが設定されていません')
+      debugError('Groq APIキーが設定されていません')
       return 'チャットボット機能を利用するには、管理者にGROQ_API_KEYの設定を依頼してください。'
     }
 
@@ -165,7 +166,7 @@ export async function generateChatResponse(
     // 質問タイプに応じてデータを準備
     const { data: videoData, count, type } = prepareVideoData(videos, message)
     
-    console.log('データ準備完了:', {
+    debugLog('データ準備完了:', {
       queryType: type,
       selectedCount: count,
       dataLength: videoData.length
@@ -202,24 +203,58 @@ ${videoData}
     })
 
     const result = completion.choices[0]?.message?.content || 'すみません、回答を生成できませんでした。'
-    console.log('Groq API応答成功:', { resultLength: result.length })
+    debugLog('Groq API応答成功:', { resultLength: result.length })
     
     return result
   } catch (error) {
-    console.error('Groq API エラー:', error)
+    debugError('Groq API エラー:', error)
     
     if (error instanceof Error) {
-      console.error('Groqエラー詳細:', {
+      debugError('Groqエラー詳細:', {
         name: error.name,
         message: error.message
       })
       
+      // Groq公式ドキュメントに基づくエラーハンドリング
+      // https://console.groq.com/docs/errors
+      
       if (error.message.includes('401') || error.message.includes('Unauthorized')) {
         return 'APIキーが無効です。管理者にGROQ_API_KEYの確認を依頼してください。'
-      } else if (error.message.includes('429') || error.message.includes('rate limit')) {
-        return 'APIの利用制限に達しました。しばらく経ってからもう一度お試しください。'
-      } else if (error.message.includes('model')) {
-        return 'モデルの問題により回答を生成できませんでした。しばらく経ってからもう一度お試しください。'
+      } else if (error.message.includes('429') || error.message.includes('Too Many Requests')) {
+        // 429 Too Many Requests: Groq公式のレート制限エラー
+        return `🕐 申し訳ございません。現在、AIアシスタントへのアクセスが集中しており、一時的に利用制限に達しています。
+
+⏰ **1分程度お待ちいただいてから、もう一度お試しください。**
+
+この制限は短時間で解除されますので、少しお時間をいただければと思います。ご不便をおかけして申し訳ありません。
+
+💡 **ヒント**: 
+- 質問を簡潔にまとめていただくと、より効率的に回答できます
+- 複数の質問がある場合は、一つずつお聞きください
+
+お待ちいただき、ありがとうございます！🙏`
+      } else if (error.message.includes('498') || error.message.includes('Flex Tier Capacity Exceeded')) {
+        // 498 Custom: Flex Tier Capacity Exceeded
+        return `⚡ 現在、Groq Flexサービスの容量が上限に達しています。
+
+⏰ **しばらく経ってから、もう一度お試しください。**
+
+このエラーは一時的なものですので、少しお時間をいただければと思います。`
+      } else if (error.message.includes('413') || error.message.includes('Request Entity Too Large')) {
+        // 413 Request Entity Too Large
+        return '送信されたメッセージが長すぎます。質問を短くしてもう一度お試しください。'
+      } else if (error.message.includes('422') || error.message.includes('Unprocessable Entity')) {
+        // 422 Unprocessable Entity
+        return 'リクエストの内容に問題があります。質問を見直してもう一度お試しください。'
+      } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+        // 500 Internal Server Error
+        return 'サーバー内部エラーが発生しました。しばらく経ってからもう一度お試しください。'
+      } else if (error.message.includes('502') || error.message.includes('Bad Gateway')) {
+        // 502 Bad Gateway
+        return 'サーバー接続エラーが発生しました。しばらく経ってからもう一度お試しください。'
+      } else if (error.message.includes('503') || error.message.includes('Service Unavailable')) {
+        // 503 Service Unavailable
+        return 'サービスが一時的に利用できません。メンテナンス中の可能性があります。しばらく経ってからもう一度お試しください。'
       }
     }
     

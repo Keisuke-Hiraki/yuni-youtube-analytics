@@ -4,6 +4,7 @@ import VideoRanking from "@/components/video-ranking"
 import { Suspense } from "react"
 import Loading from "./loading"
 import { SiteDescription } from "@/components/site-description"
+import { debugLog } from '@/lib/utils'
 
 // キャッシュの有効期限を1時間に設定
 export const revalidate = 3600 // 1時間ごとに自動更新
@@ -46,7 +47,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Home() {
   // キャッシュを無効化するためのタイムスタンプパラメータを追加
   const timestamp = Date.now()
-  console.log(`ページ読み込み開始: ${new Date(timestamp).toISOString()}`)
+  debugLog(`ページ読み込み開始: ${new Date(timestamp).toISOString()}`)
 
   const { videos, error, totalCount, lastUpdated, channelInfo } = await fetchYuNiVideos()
 
