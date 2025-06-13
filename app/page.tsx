@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { fetchYuNiVideos } from "./actions"
+import { fetchYuNiVideosWithCache } from "./actions"
 import VideoRanking from "@/components/video-ranking"
 import { Suspense } from "react"
 import Loading from "./loading"
@@ -11,8 +11,8 @@ import { debugLog } from '@/lib/utils'
 export const revalidate = 3600 // 1時間ごとに自動更新
 
 export async function generateMetadata(): Promise<Metadata> {
-  // チャンネル情報を取得（既存の関数を再利用）
-  const { channelInfo } = await fetchYuNiVideos()
+  // チャンネル情報を取得（キャッシュ機能付きの関数を使用）
+  const { channelInfo } = await fetchYuNiVideosWithCache()
 
   // 動的なメタデータを生成
   return {
@@ -50,7 +50,8 @@ export default async function Home() {
   const timestamp = Date.now()
   debugLog(`ページ読み込み開始: ${new Date(timestamp).toISOString()}`)
 
-  const { videos, error, totalCount, lastUpdated, channelInfo } = await fetchYuNiVideos()
+  // キャッシュされたデータを取得（新しい関数を使用）
+  const { videos, error, totalCount, lastUpdated, channelInfo } = await fetchYuNiVideosWithCache()
 
   return (
     <>
