@@ -13,32 +13,7 @@ import { BackgroundManager } from "@/components/backgrounds/background-manager"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "YuNi Stellar Chart",
-  description: "Vsinger YuNiの動画をランキング",
   metadataBase: new URL("https://yuni-stellar-chart.vercel.app"),
-  openGraph: {
-    title: "YuNi Stellar Chart",
-    description: "Vsinger YuNiの動画をランキング",
-    type: "website",
-    url: "/",
-    siteName: "YuNi Stellar Chart",
-    locale: "ja_JP",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 1200,
-        alt: "YuNi Stellar Chart - YuNiの動画ランキングサイト",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "YuNi Stellar Chart",
-    description: "Vsinger YuNiの動画をランキング",
-    images: ["/og-image.png"],
-    creator: "@YuNiOfficial",
-  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -47,7 +22,7 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
     apple: "/apple-touch-icon.png",
   },
-    generator: 'v0.dev'
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -68,13 +43,15 @@ export default function RootLayout({
           <LanguageProvider>
             {/* ネオン背景エフェクト */}
             <BackgroundManager />
-            <div className="relative flex min-h-screen flex-col">
+            <div className="relative flex min-h-screen flex-col" style={{ zIndex: 1 }}>
               <SiteHeader />
               <div className="flex-1">{children}</div>
               <SiteFooter />
             </div>
-            <ChatButton />
-            <Toaster />
+            <div style={{ zIndex: 1000 }}>
+              <ChatButton />
+              <Toaster />
+            </div>
           </LanguageProvider>
         </ThemeProvider>
       </body>

@@ -18,6 +18,18 @@ export interface ChannelInfo {
   thumbnailUrl: string
 }
 
+// メモリキャッシュ用の変数
+let cachedData: {
+  videos: YouTubeVideo[]
+  error?: string
+  totalCount: number
+  lastUpdated: string
+  channelInfo: ChannelInfo | null
+  cacheTimestamp: number
+} | null = null
+
+const CACHE_DURATION = 60 * 60 * 1000 // 1時間（ミリ秒）
+
 // チャンネル情報を取得する関数
 export async function getChannelInfo(): Promise<ChannelInfo | null> {
   try {
@@ -101,6 +113,45 @@ async function calculateTotalViewCount(videos: YouTubeVideo[]): Promise<number> 
   }
 }
 
+// キャッシュ付きでデータを取得する新しい関数
+export async function fetchYuNiVideosWithCache(): Promise<{
+  videos: YouTubeVideo[]
+  error?: string
+  totalCount: number
+  lastUpdated: string
+  channelInfo: ChannelInfo | null
+}> {
+  const now = Date.now()
+  
+  // キャッシュが存在し、有効期限内の場合はキャッシュを返す
+  if (cachedData && (now - cachedData.cacheTimestamp) < CACHE_DURATION) {
+    debugLog('キャッシュからデータを返します', {
+      cacheAge: Math.round((now - cachedData.cacheTimestamp) / 1000 / 60),
+      totalVideos: cachedData.totalCount
+    })
+    
+    return {
+      videos: cachedData.videos,
+      error: cachedData.error,
+      totalCount: cachedData.totalCount,
+      lastUpdated: cachedData.lastUpdated,
+      channelInfo: cachedData.channelInfo
+    }
+  }
+
+  // キャッシュが無効または存在しない場合は新しいデータを取得
+  debugLog('新しいデータを取得します')
+  const freshData = await fetchYuNiVideos()
+  
+  // キャッシュを更新
+  cachedData = {
+    ...freshData,
+    cacheTimestamp: now
+  }
+  
+  return freshData
+}
+
 // キャッシュの有効期限を1時間に設定
 export async function fetchYuNiVideos(): Promise<{
   videos: YouTubeVideo[]
@@ -171,14 +222,21 @@ export async function fetchYuNiVideos(): Promise<{
   }
 }
 
-// キャッシュを強制的に更新するためのアクション
+// キャッシュを強制的に更新するためのアクション（修正版）
 export async function refreshVideoData(): Promise<{
   success: boolean
   message: string
 }> {
   try {
     // 意図的に少し遅延させて、プログレスバーの動きを見せる
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // キャッシュをクリア
+    cachedData = null
+    debugLog('キャッシュをクリアしました')
+
+    // 新しいデータを取得してキャッシュを更新
+    await fetchYuNiVideosWithCache()
 
     // ルートパスのキャッシュを再検証
     revalidatePath("/")

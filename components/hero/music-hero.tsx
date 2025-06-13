@@ -27,16 +27,6 @@ export const MusicHero = () => {
           </NeonText>
         </motion.div>
 
-        {/* サブタイトル */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5, duration: 1 }}
-          className="text-xl text-gray-300 max-w-2xl mx-auto"
-        >
-                      Vsinger YuNiの動画をランキング
-        </motion.p>
-
         {/* ビジュアライザー */}
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}

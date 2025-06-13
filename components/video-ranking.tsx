@@ -487,7 +487,9 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                   likeCount: video.likeCount,
                   commentCount: video.commentCount,
                   popularityScore: Math.min(video.viewCount / 10000000, 1), // 1000万再生を最大値として正規化
-                  publishedAt: video.publishedAt
+                  publishedAt: video.publishedAt,
+                  duration: video.duration,
+                  isShort: video.isShort
                 }
 
                 return (

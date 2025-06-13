@@ -4,6 +4,10 @@ import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { Card } from '../ui/card'
 import { NeonText } from '@/components/neon/neon-text'
+import { Eye, ThumbsUp, MessageSquare, Clock } from 'lucide-react'
+import { formatNumber, formatDate, formatDuration, getViewCountTag } from '@/lib/youtube'
+import { useLanguage } from '@/lib/language-context'
+import Image from 'next/image'
 
 interface Video {
   id: string
@@ -14,6 +18,8 @@ interface Video {
   commentCount?: number
   popularityScore?: number
   publishedAt?: string
+  duration?: string
+  isShort?: boolean
 }
 
 interface NeonVideoCardProps {
@@ -25,9 +31,11 @@ interface NeonVideoCardProps {
 export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => {
   const [isHovered, setIsHovered] = useState(false)
   const [isPlayButtonHovered, setIsPlayButtonHovered] = useState(false)
+  const { language } = useLanguage()
   
   const neonColors = ['pink', 'cyan', 'green', 'purple', 'orange'] as const
   const color = neonColors[index % neonColors.length]
+  const viewCountTag = getViewCountTag(video.viewCount || 0)
 
   const glowClasses = {
     pink: 'neon-glow-pink',
@@ -83,11 +91,14 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
         
         {/* サムネイル */}
         <div className="relative">
-          <img 
+          <Image 
             src={video.thumbnail} 
             alt={video.title}
+            width={320}
+            height={180}
             className="w-full h-48 object-cover transition-transform duration-300"
           />
+          
           {/* 再生ボタンオーバーレイ */}
           <div 
             className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
@@ -124,6 +135,46 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
               <span className="text-black text-2xl ml-1 relative z-10">▶</span>
             </motion.div>
           </div>
+
+          {/* 動画情報オーバーレイ */}
+          {video.duration && (
+            <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
+              {formatDuration(video.duration)}
+            </div>
+          )}
+          
+          <div className="absolute top-2 left-2 bg-black/80 text-white text-xs px-2 py-1 rounded-full">
+            #{index + 1}
+          </div>
+          
+          {video.isShort && (
+            <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+              #shorts
+            </div>
+          )}
+          
+          {viewCountTag && (
+            <div
+              className={`absolute bottom-2 left-2 text-xs px-2 py-1 rounded-full font-medium shadow-md`}
+              style={{
+                backgroundColor: viewCountTag.label.includes("100M")
+                  ? "#22d3ee"
+                  : viewCountTag.label.includes("10M")
+                    ? "#facc15"
+                    : viewCountTag.label.includes("1M")
+                      ? "#d1d5db"
+                      : "#d97706",
+                color:
+                  viewCountTag.label.includes("100M") ||
+                  viewCountTag.label.includes("10M") ||
+                  viewCountTag.label.includes("1M")
+                    ? "#1e293b"
+                    : "#ffffff",
+              }}
+            >
+              {viewCountTag.label}
+            </div>
+          )}
         </div>
 
         {/* コンテンツ */}
@@ -132,17 +183,24 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
             {video.title}
           </NeonText>
           
-          {/* 統計情報 */}
-          <div className="flex justify-between text-sm text-gray-400">
-            <span className="flex items-center gap-1">
-              👁 {video.viewCount?.toLocaleString() || '0'}
-            </span>
-            <span className="flex items-center gap-1">
-              👍 {video.likeCount?.toLocaleString() || '0'}
-            </span>
-            <span className="flex items-center gap-1">
-              💬 {video.commentCount?.toLocaleString() || '0'}
-            </span>
+          {/* 統計情報（アイコン付き） */}
+          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Eye className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{formatNumber(video.viewCount || 0)}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <ThumbsUp className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{formatNumber(video.likeCount || 0)}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MessageSquare className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{formatNumber(video.commentCount || 0)}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Clock className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{video.publishedAt ? formatDate(video.publishedAt, language) : ''}</span>
+            </div>
           </div>
 
           {/* プログレスバー（人気度） */}
@@ -157,13 +215,6 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
               }}
             />
           </div>
-
-          {/* 公開日 */}
-          {video.publishedAt && (
-            <div className="text-xs text-gray-500">
-              {new Date(video.publishedAt).toLocaleDateString('ja-JP')}
-            </div>
-          )}
         </div>
       </Card>
     </motion.div>
