@@ -4,6 +4,7 @@ import VideoRanking from "@/components/video-ranking"
 import { Suspense } from "react"
 import Loading from "./loading"
 import { SiteDescription } from "@/components/site-description"
+import { MusicHero } from "@/components/hero/music-hero"
 import { debugLog } from '@/lib/utils'
 
 // キャッシュの有効期限を1時間に設定
@@ -15,13 +16,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
   // 動的なメタデータを生成
   return {
-    title: "YuNi Stellar Chart",
-    description: `YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング。${
+    title: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
+    description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
       channelInfo ? `チャンネル登録者数: ${channelInfo.subscriberCount.toLocaleString()}人` : ""
     }`,
     openGraph: {
-      title: "YuNi Stellar Chart",
-      description: `YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング。${
+      title: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
+      description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
         channelInfo ? `チャンネル登録者数: ${channelInfo.subscriberCount.toLocaleString()}人` : ""
       }`,
       images: [
@@ -29,14 +30,14 @@ export async function generateMetadata(): Promise<Metadata> {
           url: "/og-image.png",
           width: 1200,
           height: 1200,
-          alt: "YuNi Stellar Chart - YuNiの動画ランキングサイト",
+          alt: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: "YuNi Stellar Chart",
-      description: `YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング。${
+      title: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
+      description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
         channelInfo ? `チャンネル登録者数: ${channelInfo.subscriberCount.toLocaleString()}人` : ""
       }`,
       images: ["/og-image.png"],
@@ -52,16 +53,24 @@ export default async function Home() {
   const { videos, error, totalCount, lastUpdated, channelInfo } = await fetchYuNiVideos()
 
   return (
-    <main className="max-w-screen-xl mx-auto py-8 px-4 md:px-6">
-      <SiteDescription totalCount={totalCount} lastUpdated={lastUpdated} channelInfo={channelInfo} />
+    <>
+      {/* ヒーローセクション */}
+      <MusicHero />
+      
+      {/* メインコンテンツ */}
+      <main className="max-w-screen-xl mx-auto py-16 px-4 md:px-6 relative z-10">
+        <SiteDescription totalCount={totalCount} lastUpdated={lastUpdated} channelInfo={channelInfo} />
 
-      {error ? (
-        <div className="p-4 bg-red-100 text-red-800 rounded-md">{error}</div>
-      ) : (
-        <Suspense fallback={<Loading />}>
-          <VideoRanking initialVideos={videos} />
-        </Suspense>
-      )}
-    </main>
+        {error ? (
+          <div className="p-4 bg-red-500/20 border border-red-500 text-red-300 rounded-md backdrop-blur-sm">
+            {error}
+          </div>
+        ) : (
+          <Suspense fallback={<Loading />}>
+            <VideoRanking initialVideos={videos} />
+          </Suspense>
+        )}
+      </main>
+    </>
   )
 }

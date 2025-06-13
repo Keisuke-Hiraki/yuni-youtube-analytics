@@ -11,12 +11,12 @@ type Translations = {
 }
 
 // サイト名（翻訳されない固定値）
-export const SITE_TITLE = "YuNi Stellar Chart - Alpha ver."
+export const SITE_TITLE = "YuNi Stellar Chart - Beta ver."
 
 // 翻訳データ
 export const translations: Translations = {
   ja: {
-    siteDescription: "YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング",
+    siteDescription: "Vsinger YuNiの動画をランキング",
     videosAnalyzed: "動画分析数",
     lastUpdated: "最終更新",
     searchPlaceholder: "動画を検索...",

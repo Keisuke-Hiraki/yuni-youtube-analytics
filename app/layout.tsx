@@ -8,16 +8,17 @@ import { SiteFooter } from "@/components/site-footer"
 import { Toaster } from "@/components/toaster"
 import { LanguageProvider } from "@/lib/language-context"
 import { ChatButton } from "@/components/chatbot/chat-button"
+import { BackgroundManager } from "@/components/backgrounds/background-manager"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "YuNi Stellar Chart",
-  description: "YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング",
+  description: "Vsinger YuNiの動画をランキング",
   metadataBase: new URL("https://yuni-stellar-chart.vercel.app"),
   openGraph: {
     title: "YuNi Stellar Chart",
-    description: "YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング",
+    description: "Vsinger YuNiの動画をランキング",
     type: "website",
     url: "/",
     siteName: "YuNi Stellar Chart",
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "YuNi Stellar Chart",
-    description: "YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング",
+    description: "Vsinger YuNiの動画をランキング",
     images: ["/og-image.png"],
     creator: "@YuNiOfficial",
   },
@@ -65,6 +66,8 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <LanguageProvider>
+            {/* ネオン背景エフェクト */}
+            <BackgroundManager />
             <div className="relative flex min-h-screen flex-col">
               <SiteHeader />
               <div className="flex-1">{children}</div>

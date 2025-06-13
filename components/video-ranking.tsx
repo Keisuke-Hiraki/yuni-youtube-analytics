@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useMemo, useEffect, useRef } from "react"
 import Image from "next/image"
+import { motion } from "framer-motion"
 import {
   ChevronDown,
   ChevronUp,
@@ -33,6 +33,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { type YouTubeVideo, formatNumber, formatDate, formatDuration, getViewCountTag } from "@/lib/youtube"
 import VideoDetailDialog from "./video-detail-dialog"
+import { NeonVideoCard } from "@/components/cards/neon-video-card"
+import { NeonText } from "@/components/neon/neon-text"
 import { useLanguage } from "@/lib/language-context"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
@@ -57,9 +59,14 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
   const [clickedCardId, setClickedCardId] = useState<string | null>(null)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
 
+  const [hoveredItemId, setHoveredItemId] = useState<string | null>(null)
+  const [hoveredPlayButtonId, setHoveredPlayButtonId] = useState<string | null>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   // フィルターメニューの参照を作成
   const filterMenuRef = useRef<HTMLDivElement>(null)
   const filterButtonRef = useRef<HTMLButtonElement>(null)
+  const listContainerRef = useRef<HTMLDivElement>(null)
 
   // モバイル判定
   const isMobile = useMediaQuery("(max-width: 768px)")
@@ -95,6 +102,17 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
       document.removeEventListener("mouseup", handleOutsideClick)
     }
   }, [filterSheetOpen, isMobile])
+
+
+
+  // コンポーネントのクリーンアップ時にタイムアウトをクリア
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // 右クリックを防止する関数
   const preventContextMenu = (e: React.MouseEvent) => {
@@ -175,7 +193,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     // クリックアニメーションのためにIDを設定
     setClickedCardId(video.id)
 
-    // アニメーション完了後にダイアロ���を表示
+    // アニメーション完了後にダイアログを表示
     setTimeout(() => {
       setSelectedVideo(video)
       setClickedCardId(null)
@@ -278,20 +296,20 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-wrap gap-2 items-center w-full sm:w-auto">
+      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'flex-col sm:flex-row gap-4'} items-start sm:items-center justify-between`}>
+        <div className={`flex ${isMobile ? 'flex-col gap-2 w-full' : 'flex-wrap gap-2 items-center w-full sm:w-auto'}`}>
           <Input
             placeholder={t("searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-xs"
+            className={isMobile ? "w-full" : "max-w-xs"}
           />
 
           {isMobile ? (
             // モバイル向けのシートコンポーネント
             <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2 w-full justify-center">
                   <SlidersHorizontal className="h-4 w-4" />
                   {t("filterButton")}
                   {activeFilters > 0 && (
@@ -354,7 +372,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           )}
 
           {activeFilters > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2 sm:mt-0">
+            <div className={`flex ${isMobile ? 'flex-col gap-1 w-full mt-2' : 'flex-wrap gap-1 mt-2 sm:mt-0'}`}>
               {yearFilter !== "all" && (
                 <Badge variant="secondary" className="gap-1 flex items-center">
                   {yearFilter}
@@ -399,10 +417,10 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           )}
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">{t("sortBy")}</span>
+        <div className={`flex items-center gap-2 ${isMobile ? 'w-full' : 'w-full sm:w-auto'}`}>
+          <span className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground whitespace-nowrap`}>{t("sortBy")}</span>
           <Select value={sortField} onValueChange={(value) => handleSort(value as SortField)}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className={isMobile ? "w-full" : "w-full sm:w-[180px]"}>
               <SelectValue placeholder={t("sortBy")} />
             </SelectTrigger>
             <SelectContent>
@@ -415,12 +433,12 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
 
           <Button
             variant="ghost"
-            size="icon"
+            size={isMobile ? "sm" : "icon"}
             onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
             aria-label={sortOrder === "asc" ? "昇順" : "降順"}
             className="active:scale-90 transition-transform"
           >
-            {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
+            {sortOrder === "asc" ? <ChevronUp className={isMobile ? "h-4 w-4" : ""} /> : <ChevronDown className={isMobile ? "h-4 w-4" : ""} />}
           </Button>
         </div>
       </div>
@@ -447,195 +465,240 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
         </div>
       ) : (
         <Tabs defaultValue="grid" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="grid" className="transition-transform active:scale-95">
-              {t("gridView")}
+          <TabsList className={`mb-4 ${isMobile ? 'w-full' : ''}`}>
+            <TabsTrigger value="grid" className={`transition-transform active:scale-95 ${isMobile ? 'flex-1' : ''}`}>
+              {isMobile ? t("grid") : t("gridView")}
             </TabsTrigger>
-            <TabsTrigger value="list" className="transition-transform active:scale-95">
-              {t("listView")}
+            <TabsTrigger value="list" className={`transition-transform active:scale-95 ${isMobile ? 'flex-1' : ''}`}>
+              {isMobile ? t("list") : t("listView")}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="grid" className="w-full">
-            {/* 完全に再構築されたグリッドレイアウト */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+            {/* ネオンカードを使用したグリッドレイアウト（モバイル最適化） */}
+            <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8'}`}>
               {sortedVideos.map((video, index) => {
-                const viewCountTag = getViewCountTag(video.viewCount)
+                // YouTubeVideoをNeonVideoCardが期待する形式に変換
+                const neonVideo = {
+                  id: video.id,
+                  title: video.title,
+                  thumbnail: video.thumbnailUrl || "/placeholder.svg?height=180&width=320",
+                  viewCount: video.viewCount,
+                  likeCount: video.likeCount,
+                  commentCount: video.commentCount,
+                  popularityScore: Math.min(video.viewCount / 10000000, 1), // 1000万再生を最大値として正規化
+                  publishedAt: video.publishedAt
+                }
 
                 return (
-                  <div
+                  <NeonVideoCard
                     key={video.id}
-                    className={`border rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 active:scale-95 ${
-                      clickedCardId === video.id ? "click-animation" : ""
-                    } w-full`}
+                    video={neonVideo}
+                    index={index}
                     onClick={() => handleVideoClick(video)}
-                    onContextMenu={preventContextMenu}
-                  >
-                    {/* サムネイル部分 */}
-                    <div className="relative w-full">
-                      <div className="aspect-video w-full overflow-hidden">
-                        <Image
-                          src={video.thumbnailUrl || "/placeholder.svg?height=180&width=320"}
-                          alt={video.title}
-                          width={320}
-                          height={180}
-                          className="w-full h-full object-cover select-none"
-                          onContextMenu={preventContextMenu}
-                          draggable={false}
-                        />
-                      </div>
-                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
-                        {formatDuration(video.duration)}
-                      </div>
-                      <div className="absolute top-2 left-2 bg-black/80 text-white text-xs px-2 py-1 rounded-full">
-                        #{index + 1}
-                      </div>
-                      {video.isShort && (
-                        <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                          #shorts
-                        </div>
-                      )}
-                      {viewCountTag && (
-                        <div
-                          className={`absolute bottom-2 left-2 ${viewCountTag.color} text-xs px-2 py-1 rounded-full font-medium shadow-md`}
-                          style={{
-                            backgroundColor: viewCountTag.label.includes("100M")
-                              ? "#22d3ee"
-                              : viewCountTag.label.includes("10M")
-                                ? "#facc15"
-                                : viewCountTag.label.includes("1M")
-                                  ? "#d1d5db"
-                                  : "#d97706",
-                            color:
-                              viewCountTag.label.includes("100M") ||
-                              viewCountTag.label.includes("10M") ||
-                              viewCountTag.label.includes("1M")
-                                ? "#1e293b"
-                                : "#ffffff",
-                          }}
-                        >
-                          {viewCountTag.label}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 情報部分 */}
-                    <div className="p-2 sm:p-3">
-                      {/* タイトル */}
-                      <h3 className="font-medium text-sm sm:text-base mb-2 truncate">{video.title}</h3>
-
-                      {/* 統計情報 */}
-                      <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                        <div className="flex items-center gap-1">
-                          <Eye className="w-3 h-3 flex-shrink-0" />
-                          <span>{formatNumber(video.viewCount)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <ThumbsUp className="w-3 h-3 flex-shrink-0" />
-                          <span>{formatNumber(video.likeCount)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MessageSquare className="w-3 h-3 flex-shrink-0" />
-                          <span>{formatNumber(video.commentCount)}</span>
-                        </div>
-                      </div>
-
-                      {/* 日付 */}
-                      <div className="text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate">{formatDate(video.publishedAt, language)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  />
                 )
               })}
             </div>
           </TabsContent>
 
           <TabsContent value="list" className="w-full">
-            <div className="space-y-3 md:space-y-4">
+            <div 
+              ref={listContainerRef}
+              className={`space-y-2 sm:space-y-3 md:space-y-4 w-full ${isMobile ? 'px-1' : 'px-2'}`}
+            >
               {sortedVideos.map((video, index) => {
                 const viewCountTag = getViewCountTag(video.viewCount)
+                const neonColors = ['pink', 'cyan', 'green', 'purple', 'orange'] as const
+                const color = neonColors[index % neonColors.length]
+                const isHovered = hoveredItemId === video.id
+                const isPlayButtonHovered = hoveredPlayButtonId === video.id
+                
+                const glowClasses = {
+                  pink: 'neon-glow-pink',
+                  cyan: 'neon-glow-cyan',
+                  green: 'neon-glow-green',
+                  purple: 'neon-glow-purple',
+                  orange: 'shadow-lg shadow-neon-orange/20'
+                }
+
+                const borderClasses = {
+                  pink: 'border-neon-pink',
+                  cyan: 'border-neon-cyan',
+                  green: 'border-neon-green',
+                  purple: 'border-neon-purple',
+                  orange: 'border-neon-orange'
+                }
+
+                const bgClasses = {
+                  pink: 'bg-neon-pink',
+                  cyan: 'bg-neon-cyan',
+                  green: 'bg-neon-green',
+                  purple: 'bg-neon-purple',
+                  orange: 'bg-neon-orange'
+                }
 
                 return (
-                  <div
+                  <motion.div
                     key={video.id}
-                    className={`flex gap-2 sm:gap-4 p-2 sm:p-3 border rounded-lg cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:bg-muted/30 active:scale-98 ${
+                    initial={{ opacity: 0, x: isMobile ? 0 : -50 }}
+                    animate={{ 
+                      opacity: 1, 
+                      x: 0,
+                      scale: isHovered ? 1.02 : 1,
+                      y: isHovered ? -4 : 0
+                    }}
+                    transition={{ 
+                      delay: isMobile ? 0 : index * 0.05,
+                      scale: { duration: 0.3, ease: "easeOut" },
+                      y: { duration: 0.3, ease: "easeOut" },
+                      opacity: { duration: 0.2 },
+                      x: { duration: 0.4, ease: "easeOut" }
+                    }}
+                    className={`relative w-full flex gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 md:p-4 border-2 ${borderClasses[color]} ${isHovered ? glowClasses[color] : ''} rounded-lg cursor-pointer transition-all duration-300 ease-out bg-vinyl-black/80 backdrop-blur-sm active:scale-98 ${
                       clickedCardId === video.id ? "click-animation" : ""
-                    }`}
+                    } ${isHovered ? 'shadow-2xl' : 'shadow-lg'} hover:border-opacity-100 ${isMobile ? 'mx-0' : 'mx-1'}`}
                     onClick={() => handleVideoClick(video)}
                     onContextMenu={preventContextMenu}
+                    onMouseEnter={() => {
+                      // 既存のタイムアウトをクリア
+                      if (hoverTimeoutRef.current) {
+                        clearTimeout(hoverTimeoutRef.current)
+                      }
+                      setHoveredItemId(video.id)
+                    }}
+                    onMouseLeave={() => {
+                      // 少し遅延させてホバー状態をクリア（安定性向上）
+                      hoverTimeoutRef.current = setTimeout(() => {
+                        setHoveredItemId(null)
+                        setHoveredPlayButtonId(null)
+                      }, 100)
+                    }}
                   >
-                    <div className="relative flex-shrink-0 w-[120px] sm:w-[160px]">
-                      <div className="aspect-video w-full overflow-hidden rounded-md">
+                    {/* グロー効果 */}
+                    <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-${color}/10 to-transparent rounded-lg transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-50'}`} />
+                    
+                    <div className={`relative flex-shrink-0 ${isMobile ? 'w-[35%] max-w-[120px]' : 'w-[30%] sm:w-[25%] max-w-[200px]'} z-10`}>
+                      <div className="aspect-video w-full overflow-hidden rounded-md relative">
                         <Image
                           src={video.thumbnailUrl || "/placeholder.svg?height=90&width=160"}
                           alt={video.title}
                           width={160}
                           height={90}
-                          className="w-full h-full object-cover select-none rounded-md"
+                          className="w-full h-full object-cover select-none rounded-md transition-transform duration-300"
                           onContextMenu={preventContextMenu}
                           draggable={false}
                         />
-                      </div>
-                      <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
-                        {formatDuration(video.duration)}
-                      </div>
-                      <div className="absolute top-1 left-1 bg-black/80 text-white text-xs px-2 py-1 rounded-full">
-                        #{index + 1}
-                      </div>
-                      {video.isShort && (
-                        <div className="absolute top-1 right-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                          #shorts
-                        </div>
-                      )}
-                      {viewCountTag && (
-                        <div
-                          className={`absolute bottom-1 left-1 ${viewCountTag.color} text-xs px-2 py-0.5 rounded-full font-medium shadow-md`}
-                          style={{
-                            backgroundColor: viewCountTag.label.includes("100M")
-                              ? "#22d3ee"
-                              : viewCountTag.label.includes("10M")
-                                ? "#facc15"
-                                : viewCountTag.label.includes("1M")
-                                  ? "#d1d5db"
-                                  : "#d97706",
-                            color:
-                              viewCountTag.label.includes("100M") ||
-                              viewCountTag.label.includes("10M") ||
-                              viewCountTag.label.includes("1M")
-                                ? "#1e293b"
-                                : "#ffffff",
-                          }}
+                        {/* 再生ボタンオーバーレイ */}
+                        <div 
+                          className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
                         >
-                          {viewCountTag.label}
+                          <motion.div
+                            animate={{
+                              scale: isPlayButtonHovered ? 1.2 : 1
+                            }}
+                            transition={{ duration: 0.2, ease: "easeInOut" }}
+                            whileTap={{ 
+                              scale: 0.9,
+                              rotate: isMobile ? 0 : 360,
+                              transition: { 
+                                duration: isMobile ? 0.2 : 0.8,
+                                ease: [0.4, 0, 0.2, 1],
+                                type: "tween"
+                              }
+                            }}
+                            className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10 sm:w-12 sm:h-12'} rounded-full ${bgClasses[color]} flex items-center justify-center ${glowClasses[color]} relative overflow-hidden`}
+                            onMouseEnter={() => {
+                              // 既存のタイムアウトをクリア
+                              if (hoverTimeoutRef.current) {
+                                clearTimeout(hoverTimeoutRef.current)
+                              }
+                              setHoveredPlayButtonId(video.id)
+                            }}
+                            onMouseLeave={() => {
+                              // 再生ボタンから離れた時は即座にクリア
+                              setHoveredPlayButtonId(null)
+                            }}
+                          >
+                            <motion.div
+                              initial={{ scale: 1 }}
+                              whileTap={{ 
+                                scale: [1, 1.5, 1],
+                                opacity: [1, 0.7, 1]
+                              }}
+                              transition={{ duration: isMobile ? 0.2 : 0.8 }}
+                              className="absolute inset-0 rounded-full bg-white/20"
+                            />
+                            <span className={`text-black ${isMobile ? 'text-xs' : 'text-sm sm:text-lg'} ml-0.5 relative z-10`}>▶</span>
+                          </motion.div>
                         </div>
-                      )}
+                        
+                        {/* 動画情報オーバーレイ（モバイル最適化） */}
+                        <div className={`absolute bottom-1 right-1 bg-black/80 text-white ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-1 py-0.5'} rounded`}>
+                          {formatDuration(video.duration)}
+                        </div>
+                        <div className={`absolute top-1 left-1 bg-black/80 text-white ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-1'} rounded-full`}>
+                          #{index + 1}
+                        </div>
+                        {video.isShort && (
+                          <div className={`absolute top-1 right-1 bg-red-500 text-white ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-0.5'} rounded-full`}>
+                            #shorts
+                          </div>
+                        )}
+                        {viewCountTag && (
+                          <div
+                            className={`absolute bottom-1 left-1 ${viewCountTag.color} text-xs px-2 py-0.5 rounded-full font-medium shadow-md`}
+                            style={{
+                              backgroundColor: viewCountTag.label.includes("100M")
+                                ? "#22d3ee"
+                                : viewCountTag.label.includes("10M")
+                                  ? "#facc15"
+                                  : viewCountTag.label.includes("1M")
+                                    ? "#d1d5db"
+                                    : "#d97706",
+                              color:
+                                viewCountTag.label.includes("100M") ||
+                                viewCountTag.label.includes("10M") ||
+                                viewCountTag.label.includes("1M")
+                                  ? "#1e293b"
+                                  : "#ffffff",
+                            }}
+                          >
+                            {viewCountTag.label}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-grow min-w-0 overflow-hidden">
-                      <h3 className="font-medium truncate mb-1 text-sm sm:text-base">{video.title}</h3>
-                      <div className="grid grid-cols-3 gap-y-1 text-xs sm:text-sm text-muted-foreground">
+                    
+                    <div className={`flex-grow min-w-0 overflow-hidden relative z-10 ${isMobile ? 'w-[65%]' : 'w-[70%] sm:w-[75%]'}`}>
+                      <NeonText 
+                        size="sm" 
+                        color={color} 
+                        className={`${isMobile ? 'line-clamp-2 text-left mb-1 text-sm' : 'line-clamp-2 text-left mb-2 sm:mb-3'}`} 
+                        animate={false}
+                      >
+                        {video.title}
+                      </NeonText>
+                      <div className={`grid ${isMobile ? 'grid-cols-2 gap-y-1' : 'grid-cols-2 sm:grid-cols-3 gap-y-1 sm:gap-y-2'} ${isMobile ? 'text-xs' : 'text-xs sm:text-sm'} text-muted-foreground`}>
                         <div className="flex items-center gap-1">
-                          <Eye className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                          <span>{formatNumber(video.viewCount)}</span>
+                          <Eye className={`${isMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} flex-shrink-0`} />
+                          <span className="truncate">{formatNumber(video.viewCount)}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <ThumbsUp className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                          <span>{formatNumber(video.likeCount)}</span>
+                          <ThumbsUp className={`${isMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} flex-shrink-0`} />
+                          <span className="truncate">{formatNumber(video.likeCount)}</span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                          <span>{formatNumber(video.commentCount)}</span>
+                        <div className={`flex items-center gap-1 ${isMobile ? 'col-span-2' : 'col-span-2 sm:col-span-1'}`}>
+                          <MessageSquare className={`${isMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} flex-shrink-0`} />
+                          <span className="truncate">{formatNumber(video.commentCount)}</span>
                         </div>
-                        <div className="flex items-center gap-1 col-span-3 mt-1">
-                          <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                        <div className={`flex items-center gap-1 ${isMobile ? 'col-span-2 mt-0.5' : 'col-span-2 sm:col-span-3 mt-1'}`}>
+                          <Clock className={`${isMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} flex-shrink-0`} />
                           <span className="truncate">{formatDate(video.publishedAt, language)}</span>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 )
               })}
             </div>
@@ -647,3 +710,5 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     </div>
   )
 }
+
+
