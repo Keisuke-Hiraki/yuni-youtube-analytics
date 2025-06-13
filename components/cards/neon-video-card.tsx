@@ -80,9 +80,29 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
             <motion.div
               whileHover={{ scale: 1.2 }}
-              className={`w-16 h-16 rounded-full ${bgClasses[color]} flex items-center justify-center ${glowClasses[color]}`}
+              whileTap={{ 
+                scale: 0.9,
+                rotate: 360,
+                transition: { 
+                  duration: 0.6, 
+                  ease: "easeInOut",
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 20
+                }
+              }}
+              className={`w-16 h-16 rounded-full ${bgClasses[color]} flex items-center justify-center ${glowClasses[color]} relative overflow-hidden`}
             >
-              <span className="text-black text-2xl ml-1">▶</span>
+              <motion.div
+                initial={{ scale: 1 }}
+                whileTap={{ 
+                  scale: [1, 1.5, 1],
+                  opacity: [1, 0.7, 1]
+                }}
+                transition={{ duration: 0.6 }}
+                className="absolute inset-0 rounded-full bg-white/20"
+              />
+              <span className="text-black text-2xl ml-1 relative z-10">▶</span>
             </motion.div>
           </div>
         </div>

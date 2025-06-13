@@ -94,14 +94,18 @@ const config: Config = {
   					height: '0'
   				}
   			},
-  			'pulse-neon': {
-  				'0%, 100%': { 
-  					textShadow: '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor',
-  				},
-  				'50%': { 
-  					textShadow: '0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor',
-  				},
-  			},
+  						'pulse-neon': {
+				'0%, 100%': { 
+					textShadow: '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor',
+				},
+				'50%': { 
+					textShadow: '0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor',
+				},
+			},
+			'rainbow-pulse': {
+				'0%': { filter: 'hue-rotate(0deg)' },
+				'100%': { filter: 'hue-rotate(360deg)' }
+			},
   			'rotate-vinyl': {
   				'0%': { transform: 'rotate(0deg)' },
   				'100%': { transform: 'rotate(360deg)' },
@@ -118,14 +122,15 @@ const config: Config = {
   				'100%': { height: '20%' },
   			}
   		},
-  		animation: {
-  			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out',
-  			'pulse-neon': 'pulse-neon 2s ease-in-out infinite',
-  			'rotate-vinyl': 'rotate-vinyl 3s linear infinite',
-  			'bounce-note': 'bounce-note 2s ease-in-out infinite',
-  			'spectrum-dance': 'spectrum-dance 1s ease-in-out infinite',
-  		}
+  				animation: {
+			'accordion-down': 'accordion-down 0.2s ease-out',
+			'accordion-up': 'accordion-up 0.2s ease-out',
+			'pulse-neon': 'pulse-neon 3s ease-in-out infinite',
+			'rainbow-pulse': 'rainbow-pulse 4s linear infinite',
+			'rotate-vinyl': 'rotate-vinyl 3s linear infinite',
+			'bounce-note': 'bounce-note 2s ease-in-out infinite',
+			'spectrum-dance': 'spectrum-dance 1s ease-in-out infinite',
+		}
   	}
   },
   plugins: [require("tailwindcss-animate")],

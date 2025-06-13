@@ -23,9 +23,6 @@ export function SiteDescription({ totalCount, lastUpdated, channelInfo }: SiteDe
       <div className="absolute inset-0 bg-gradient-to-r from-neon-pink/5 via-neon-cyan/5 to-neon-green/5 rounded-2xl blur-xl" />
       
       <div className="relative z-10">
-        <NeonText size="xl" color="cyan" className="mb-4">
-          音楽ランキング
-        </NeonText>
         <p className="text-gray-300 max-w-2xl mx-auto mb-6 text-lg">
           {t("siteDescription")}
         </p>

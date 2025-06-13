@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { ModeToggle } from "./mode-toggle"
 import { LanguageSwitcher } from "./language-switcher"
 import { NeonText } from "./neon/neon-text"
 import { useLanguage } from "@/lib/language-context"
@@ -35,7 +34,6 @@ export function SiteHeader() {
         <div className="flex items-center space-x-4">
           <nav className="flex items-center space-x-3">
             <LanguageSwitcher />
-            <ModeToggle />
           </nav>
         </div>
       </div>

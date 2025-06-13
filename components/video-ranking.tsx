@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useMemo, useEffect, useRef } from "react"
 import Image from "next/image"
+import { motion } from "framer-motion"
 import {
   ChevronDown,
   ChevronUp,
@@ -34,6 +35,7 @@ import { Badge } from "@/components/ui/badge"
 import { type YouTubeVideo, formatNumber, formatDate, formatDuration, getViewCountTag } from "@/lib/youtube"
 import VideoDetailDialog from "./video-detail-dialog"
 import { NeonVideoCard } from "@/components/cards/neon-video-card"
+import { NeonText } from "@/components/neon/neon-text"
 import { useLanguage } from "@/lib/language-context"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
@@ -176,7 +178,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     // クリックアニメーションのためにIDを設定
     setClickedCardId(video.id)
 
-    // アニメーション完了後にダイアロ���を表示
+    // アニメーション完了後にダイアログを表示
     setTimeout(() => {
       setSelectedVideo(video)
       setClickedCardId(null)
@@ -489,17 +491,53 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
             <div className="space-y-3 md:space-y-4">
               {sortedVideos.map((video, index) => {
                 const viewCountTag = getViewCountTag(video.viewCount)
+                const neonColors = ['pink', 'cyan', 'green', 'purple', 'orange'] as const
+                const color = neonColors[index % neonColors.length]
+                
+                const glowClasses = {
+                  pink: 'neon-glow-pink',
+                  cyan: 'neon-glow-cyan',
+                  green: 'neon-glow-green',
+                  purple: 'neon-glow-purple',
+                  orange: 'shadow-lg shadow-neon-orange/20'
+                }
+
+                const borderClasses = {
+                  pink: 'border-neon-pink',
+                  cyan: 'border-neon-cyan',
+                  green: 'border-neon-green',
+                  purple: 'border-neon-purple',
+                  orange: 'border-neon-orange'
+                }
+
+                const bgClasses = {
+                  pink: 'bg-neon-pink',
+                  cyan: 'bg-neon-cyan',
+                  green: 'bg-neon-green',
+                  purple: 'bg-neon-purple',
+                  orange: 'bg-neon-orange'
+                }
 
                 return (
-                  <div
+                  <motion.div
                     key={video.id}
-                    className={`flex gap-2 sm:gap-4 p-2 sm:p-3 border rounded-lg cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:bg-muted/30 active:scale-98 ${
+                    initial={{ opacity: 0, x: -50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    whileHover={{ 
+                      scale: 1.02,
+                      transition: { duration: 0.2 }
+                    }}
+                    className={`flex gap-2 sm:gap-4 p-2 sm:p-3 border-2 ${borderClasses[color]} ${glowClasses[color]} rounded-lg cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-vinyl-black/80 backdrop-blur-sm active:scale-98 ${
                       clickedCardId === video.id ? "click-animation" : ""
                     }`}
                     onClick={() => handleVideoClick(video)}
                     onContextMenu={preventContextMenu}
                   >
-                    <div className="relative flex-shrink-0 w-[120px] sm:w-[160px]">
+                    {/* グロー効果 */}
+                    <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-${color}/10 to-transparent rounded-lg`} />
+                    
+                    <div className="relative flex-shrink-0 w-[120px] sm:w-[160px] z-10">
                       <div className="aspect-video w-full overflow-hidden rounded-md">
                         <Image
                           src={video.thumbnailUrl || "/placeholder.svg?height=90&width=160"}
@@ -510,6 +548,35 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                           onContextMenu={preventContextMenu}
                           draggable={false}
                         />
+                        {/* 再生ボタンオーバーレイ */}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
+                          <motion.div
+                            whileHover={{ scale: 1.2 }}
+                            whileTap={{ 
+                              scale: 0.9,
+                              rotate: 360,
+                              transition: { 
+                                duration: 0.6, 
+                                ease: "easeInOut",
+                                type: "spring",
+                                stiffness: 300,
+                                damping: 20
+                              }
+                            }}
+                            className={`w-12 h-12 rounded-full ${bgClasses[color]} flex items-center justify-center ${glowClasses[color]} relative overflow-hidden`}
+                          >
+                            <motion.div
+                              initial={{ scale: 1 }}
+                              whileTap={{ 
+                                scale: [1, 1.5, 1],
+                                opacity: [1, 0.7, 1]
+                              }}
+                              transition={{ duration: 0.6 }}
+                              className="absolute inset-0 rounded-full bg-white/20"
+                            />
+                            <span className="text-black text-lg ml-0.5 relative z-10">▶</span>
+                          </motion.div>
+                        </div>
                       </div>
                       <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
                         {formatDuration(video.duration)}
@@ -545,8 +612,10 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                         </div>
                       )}
                     </div>
-                    <div className="flex-grow min-w-0 overflow-hidden">
-                      <h3 className="font-medium truncate mb-1 text-sm sm:text-base">{video.title}</h3>
+                    <div className="flex-grow min-w-0 overflow-hidden relative z-10">
+                      <NeonText size="sm" color={color} className="line-clamp-2 text-left mb-2" animate={false}>
+                        {video.title}
+                      </NeonText>
                       <div className="grid grid-cols-3 gap-y-1 text-xs sm:text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Eye className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
@@ -566,7 +635,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 )
               })}
             </div>

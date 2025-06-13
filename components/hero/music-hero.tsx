@@ -57,7 +57,7 @@ export const MusicHero = () => {
           transition={{ delay: 0.5, duration: 1 }}
           className="text-xl text-gray-300 max-w-2xl mx-auto"
         >
-          音楽の世界を彩る、ネオンに輝く動画ランキング
+          YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング
         </motion.p>
 
         {/* ビジュアライザー */}
