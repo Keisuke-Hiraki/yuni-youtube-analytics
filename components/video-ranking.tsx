@@ -58,9 +58,10 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
   const [activeFilters, setActiveFilters] = useState<number>(0)
   const [clickedCardId, setClickedCardId] = useState<string | null>(null)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
-  const [scrollRotation, setScrollRotation] = useState(0)
+
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null)
   const [hoveredPlayButtonId, setHoveredPlayButtonId] = useState<string | null>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // フィルターメニューの参照を作成
   const filterMenuRef = useRef<HTMLDivElement>(null)
@@ -102,22 +103,14 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     }
   }, [filterSheetOpen, isMobile])
 
-  // スクロール回転効果のイベントハンドラー（修正版）
-  useEffect(() => {
-    const handleScroll = () => {
-      if (listContainerRef.current) {
-        const scrollTop = listContainerRef.current.scrollTop
-        const maxScroll = listContainerRef.current.scrollHeight - listContainerRef.current.clientHeight
-        const scrollProgress = scrollTop / maxScroll
-        const rotation = scrollProgress * 360 * 2 // 2回転
-        setScrollRotation(rotation)
-      }
-    }
 
-    const listContainer = listContainerRef.current
-    if (listContainer) {
-      listContainer.addEventListener('scroll', handleScroll, { passive: true })
-      return () => listContainer.removeEventListener('scroll', handleScroll)
+
+  // コンポーネントのクリーンアップ時にタイムアウトをクリア
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -512,19 +505,14 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           <TabsContent value="list" className="w-full">
             <div 
               ref={listContainerRef}
-              className={`space-y-2 sm:space-y-3 md:space-y-4 max-h-[80vh] overflow-y-auto scroll-smooth vertical-scroll-container w-full ${isMobile ? 'px-1' : 'px-2'}`}
-              style={{
-                transform: isMobile ? 'none' : `perspective(1000px) rotateX(${scrollRotation * 0.05}deg)`,
-                transformStyle: isMobile ? 'flat' : 'preserve-3d',
-                transition: isMobile ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
+              className={`space-y-2 sm:space-y-3 md:space-y-4 max-h-[80vh] overflow-y-auto scroll-smooth custom-scrollbar w-full ${isMobile ? 'px-1' : 'px-2'}`}
             >
               {sortedVideos.map((video, index) => {
                 const viewCountTag = getViewCountTag(video.viewCount)
                 const neonColors = ['pink', 'cyan', 'green', 'purple', 'orange'] as const
                 const color = neonColors[index % neonColors.length]
-                const isHovered = !isMobile && hoveredItemId === video.id
-                const isPlayButtonHovered = !isMobile && hoveredPlayButtonId === video.id
+                const isHovered = hoveredItemId === video.id
+                const isPlayButtonHovered = hoveredPlayButtonId === video.id
                 
                 const glowClasses = {
                   pink: 'neon-glow-pink',
@@ -573,13 +561,18 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                     onClick={() => handleVideoClick(video)}
                     onContextMenu={preventContextMenu}
                     onMouseEnter={() => {
-                      if (!isMobile) setHoveredItemId(video.id)
+                      // 既存のタイムアウトをクリア
+                      if (hoverTimeoutRef.current) {
+                        clearTimeout(hoverTimeoutRef.current)
+                      }
+                      setHoveredItemId(video.id)
                     }}
                     onMouseLeave={() => {
-                      if (!isMobile) {
+                      // 少し遅延させてホバー状態をクリア（安定性向上）
+                      hoverTimeoutRef.current = setTimeout(() => {
                         setHoveredItemId(null)
                         setHoveredPlayButtonId(null)
-                      }
+                      }, 100)
                     }}
                   >
                     {/* グロー効果 */}
@@ -596,9 +589,9 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                           onContextMenu={preventContextMenu}
                           draggable={false}
                         />
-                        {/* 再生ボタンオーバーレイ（モバイル最適化版） */}
+                        {/* 再生ボタンオーバーレイ */}
                         <div 
-                          className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${isHovered || isMobile ? 'opacity-100' : 'opacity-0'}`}
+                          className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
                         >
                           <motion.div
                             animate={{
@@ -615,8 +608,17 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                               }
                             }}
                             className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10 sm:w-12 sm:h-12'} rounded-full ${bgClasses[color]} flex items-center justify-center ${glowClasses[color]} relative overflow-hidden`}
-                            onMouseEnter={() => !isMobile && setHoveredPlayButtonId(video.id)}
-                            onMouseLeave={() => !isMobile && setHoveredPlayButtonId(null)}
+                            onMouseEnter={() => {
+                              // 既存のタイムアウトをクリア
+                              if (hoverTimeoutRef.current) {
+                                clearTimeout(hoverTimeoutRef.current)
+                              }
+                              setHoveredPlayButtonId(video.id)
+                            }}
+                            onMouseLeave={() => {
+                              // 再生ボタンから離れた時は即座にクリア
+                              setHoveredPlayButtonId(null)
+                            }}
                           >
                             <motion.div
                               initial={{ scale: 1 }}

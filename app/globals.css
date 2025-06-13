@@ -236,29 +236,23 @@
   animation: rainbow-shift 5s ease infinite;
 }
 
-/* 縦回転スクロール効果（修正版） */
-.vertical-scroll-container {
-  perspective: 1000px;
-  transform-style: preserve-3d;
-  overflow-x: visible; /* 横方向のオーバーフローを許可 */
-}
-
-.vertical-scroll-container::-webkit-scrollbar {
+/* スクロールバーのスタイリング */
+.custom-scrollbar::-webkit-scrollbar {
   width: 8px;
 }
 
-.vertical-scroll-container::-webkit-scrollbar-track {
+.custom-scrollbar::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
 
-.vertical-scroll-container::-webkit-scrollbar-thumb {
+.custom-scrollbar::-webkit-scrollbar-thumb {
   background: linear-gradient(45deg, var(--neon-pink), var(--neon-cyan));
   border-radius: 4px;
   box-shadow: 0 0 10px var(--neon-pink);
 }
 
-.vertical-scroll-container::-webkit-scrollbar-thumb:hover {
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(45deg, var(--neon-cyan), var(--neon-green));
   box-shadow: 0 0 15px var(--neon-cyan);
 }
@@ -284,11 +278,6 @@
 
 /* モバイル最適化 */
 @media (max-width: 768px) {
-  .vertical-scroll-container {
-    perspective: none;
-    transform-style: flat;
-  }
-  
   .neon-glow-pink,
   .neon-glow-cyan,
   .neon-glow-green,
