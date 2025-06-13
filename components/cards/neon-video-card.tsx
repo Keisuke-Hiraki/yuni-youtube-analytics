@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { useState } from 'react'
 import { Card } from '../ui/card'
 import { NeonText } from '@/components/neon/neon-text'
 
@@ -22,6 +23,9 @@ interface NeonVideoCardProps {
 }
 
 export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => {
+  const [isHovered, setIsHovered] = useState(false)
+  const [isPlayButtonHovered, setIsPlayButtonHovered] = useState(false)
+  
   const neonColors = ['pink', 'cyan', 'green', 'purple', 'orange'] as const
   const color = neonColors[index % neonColors.length]
 
@@ -52,34 +56,49 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
   return (
     <motion.div
       initial={{ opacity: 0, y: 50 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      whileHover={{ 
-        scale: 1.05,
-        transition: { duration: 0.2 }
+      animate={{
+        opacity: 1,
+        y: 0,
+        scale: isHovered ? 1.05 : 1
+      }}
+      transition={{
+        delay: index * 0.1,
+        scale: { duration: 0.2, ease: "easeInOut" },
+        opacity: { duration: 0.3 },
+        y: { duration: 0.3 }
       }}
       onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className="cursor-pointer"
     >
       <Card className={`
         relative overflow-hidden bg-vinyl-black/80 backdrop-blur-sm
-        border-2 ${borderClasses[color]} ${glowClasses[color]}
-        hover:shadow-2xl transition-all duration-300
+        border-2 ${borderClasses[color]} ${isHovered ? glowClasses[color] : ''}
+        transition-all duration-300 ease-in-out
+        ${isHovered ? 'shadow-2xl' : 'shadow-lg'}
       `}>
         {/* グロー効果 */}
-        <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-${color}/10 to-transparent`} />
+        <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-${color}/10 to-transparent transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-50'}`} />
         
         {/* サムネイル */}
         <div className="relative">
           <img 
             src={video.thumbnail} 
             alt={video.title}
-            className="w-full h-48 object-cover"
+            className="w-full h-48 object-cover transition-transform duration-300"
           />
           {/* 再生ボタンオーバーレイ */}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
+          <div 
+            className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
+            onMouseEnter={() => setIsPlayButtonHovered(true)}
+            onMouseLeave={() => setIsPlayButtonHovered(false)}
+          >
             <motion.div
-              whileHover={{ scale: 1.2 }}
+              animate={{
+                scale: isPlayButtonHovered ? 1.2 : 1
+              }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
               whileTap={{ 
                 scale: 0.9,
                 rotate: 360,

@@ -60,6 +60,8 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
   const [clickedCardId, setClickedCardId] = useState<string | null>(null)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [scrollRotation, setScrollRotation] = useState(0)
+  const [hoveredItemId, setHoveredItemId] = useState<string | null>(null)
+  const [hoveredPlayButtonId, setHoveredPlayButtonId] = useState<string | null>(null)
 
   // フィルターメニューの参照を作成
   const filterMenuRef = useRef<HTMLDivElement>(null)
@@ -511,7 +513,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           <TabsContent value="list" className="w-full">
             <div 
               ref={listContainerRef}
-              className="space-y-3 md:space-y-4 max-h-[80vh] overflow-y-auto scroll-smooth vertical-scroll-container"
+              className="space-y-3 md:space-y-4 max-h-[80vh] overflow-y-auto scroll-smooth vertical-scroll-container w-full"
               style={{
                 transform: `perspective(1000px) rotateX(${scrollRotation * 0.1}deg)`,
                 transformStyle: 'preserve-3d',
@@ -522,6 +524,8 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                 const viewCountTag = getViewCountTag(video.viewCount)
                 const neonColors = ['pink', 'cyan', 'green', 'purple', 'orange'] as const
                 const color = neonColors[index % neonColors.length]
+                const isHovered = hoveredItemId === video.id
+                const isPlayButtonHovered = hoveredPlayButtonId === video.id
                 
                 const glowClasses = {
                   pink: 'neon-glow-pink',
@@ -551,20 +555,27 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                   <motion.div
                     key={video.id}
                     initial={{ opacity: 0, x: -50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    whileHover={{ 
-                      scale: 1.02,
-                      transition: { duration: 0.2 }
+                    animate={{ 
+                      opacity: 1, 
+                      x: 0,
+                      scale: isHovered ? 1.02 : 1,
+                      y: isHovered ? -4 : 0
                     }}
-                    className={`flex gap-2 sm:gap-4 p-2 sm:p-3 border-2 ${borderClasses[color]} ${glowClasses[color]} rounded-lg cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-vinyl-black/80 backdrop-blur-sm active:scale-98 ${
+                    transition={{ 
+                      delay: index * 0.05,
+                      scale: { duration: 0.2, ease: "easeInOut" },
+                      y: { duration: 0.2, ease: "easeInOut" }
+                    }}
+                    className={`w-full flex gap-2 sm:gap-4 p-2 sm:p-3 border-2 ${borderClasses[color]} ${isHovered ? glowClasses[color] : ''} rounded-lg cursor-pointer transition-all duration-300 ease-in-out bg-vinyl-black/80 backdrop-blur-sm active:scale-98 ${
                       clickedCardId === video.id ? "click-animation" : ""
-                    }`}
+                    } ${isHovered ? 'shadow-2xl' : 'shadow-lg'}`}
                     onClick={() => handleVideoClick(video)}
                     onContextMenu={preventContextMenu}
+                    onMouseEnter={() => setHoveredItemId(video.id)}
+                    onMouseLeave={() => setHoveredItemId(null)}
                   >
                     {/* グロー効果 */}
-                    <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-${color}/10 to-transparent rounded-lg`} />
+                    <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-${color}/10 to-transparent rounded-lg transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-50'}`} />
                     
                     <div className="relative flex-shrink-0 w-[120px] sm:w-[160px] z-10">
                       <div className="aspect-video w-full overflow-hidden rounded-md">
@@ -573,14 +584,21 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                           alt={video.title}
                           width={160}
                           height={90}
-                          className="w-full h-full object-cover select-none rounded-md"
+                          className="w-full h-full object-cover select-none rounded-md transition-transform duration-300"
                           onContextMenu={preventContextMenu}
                           draggable={false}
                         />
                         {/* 再生ボタンオーバーレイ */}
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
+                        <div 
+                          className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
+                          onMouseEnter={() => setHoveredPlayButtonId(video.id)}
+                          onMouseLeave={() => setHoveredPlayButtonId(null)}
+                        >
                           <motion.div
-                            whileHover={{ scale: 1.2 }}
+                            animate={{
+                              scale: isPlayButtonHovered ? 1.2 : 1
+                            }}
+                            transition={{ duration: 0.2, ease: "easeInOut" }}
                             whileTap={{ 
                               scale: 0.9,
                               rotate: 360,
@@ -676,3 +694,5 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     </div>
   )
 }
+
+
