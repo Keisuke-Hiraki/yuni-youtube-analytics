@@ -505,7 +505,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           <TabsContent value="list" className="w-full">
             <div 
               ref={listContainerRef}
-              className={`space-y-2 sm:space-y-3 md:space-y-4 max-h-[80vh] overflow-y-auto scroll-smooth custom-scrollbar w-full ${isMobile ? 'px-1' : 'px-2'}`}
+              className={`space-y-2 sm:space-y-3 md:space-y-4 w-full ${isMobile ? 'px-1' : 'px-2'}`}
             >
               {sortedVideos.map((video, index) => {
                 const viewCountTag = getViewCountTag(video.viewCount)
