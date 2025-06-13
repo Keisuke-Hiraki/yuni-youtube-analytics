@@ -33,6 +33,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { type YouTubeVideo, formatNumber, formatDate, formatDuration, getViewCountTag } from "@/lib/youtube"
 import VideoDetailDialog from "./video-detail-dialog"
+import { NeonVideoCard } from "@/components/cards/neon-video-card"
 import { useLanguage } from "@/lib/language-context"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
@@ -457,98 +458,28 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           </TabsList>
 
           <TabsContent value="grid" className="w-full">
-            {/* 完全に再構築されたグリッドレイアウト */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+            {/* ネオンカードを使用したグリッドレイアウト */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
               {sortedVideos.map((video, index) => {
-                const viewCountTag = getViewCountTag(video.viewCount)
+                // YouTubeVideoをNeonVideoCardが期待する形式に変換
+                const neonVideo = {
+                  id: video.id,
+                  title: video.title,
+                  thumbnail: video.thumbnailUrl || "/placeholder.svg?height=180&width=320",
+                  viewCount: video.viewCount,
+                  likeCount: video.likeCount,
+                  commentCount: video.commentCount,
+                  popularityScore: Math.min(video.viewCount / 10000000, 1), // 1000万再生を最大値として正規化
+                  publishedAt: video.publishedAt
+                }
 
                 return (
-                  <div
+                  <NeonVideoCard
                     key={video.id}
-                    className={`border rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 active:scale-95 ${
-                      clickedCardId === video.id ? "click-animation" : ""
-                    } w-full`}
+                    video={neonVideo}
+                    index={index}
                     onClick={() => handleVideoClick(video)}
-                    onContextMenu={preventContextMenu}
-                  >
-                    {/* サムネイル部分 */}
-                    <div className="relative w-full">
-                      <div className="aspect-video w-full overflow-hidden">
-                        <Image
-                          src={video.thumbnailUrl || "/placeholder.svg?height=180&width=320"}
-                          alt={video.title}
-                          width={320}
-                          height={180}
-                          className="w-full h-full object-cover select-none"
-                          onContextMenu={preventContextMenu}
-                          draggable={false}
-                        />
-                      </div>
-                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
-                        {formatDuration(video.duration)}
-                      </div>
-                      <div className="absolute top-2 left-2 bg-black/80 text-white text-xs px-2 py-1 rounded-full">
-                        #{index + 1}
-                      </div>
-                      {video.isShort && (
-                        <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                          #shorts
-                        </div>
-                      )}
-                      {viewCountTag && (
-                        <div
-                          className={`absolute bottom-2 left-2 ${viewCountTag.color} text-xs px-2 py-1 rounded-full font-medium shadow-md`}
-                          style={{
-                            backgroundColor: viewCountTag.label.includes("100M")
-                              ? "#22d3ee"
-                              : viewCountTag.label.includes("10M")
-                                ? "#facc15"
-                                : viewCountTag.label.includes("1M")
-                                  ? "#d1d5db"
-                                  : "#d97706",
-                            color:
-                              viewCountTag.label.includes("100M") ||
-                              viewCountTag.label.includes("10M") ||
-                              viewCountTag.label.includes("1M")
-                                ? "#1e293b"
-                                : "#ffffff",
-                          }}
-                        >
-                          {viewCountTag.label}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 情報部分 */}
-                    <div className="p-2 sm:p-3">
-                      {/* タイトル */}
-                      <h3 className="font-medium text-sm sm:text-base mb-2 truncate">{video.title}</h3>
-
-                      {/* 統計情報 */}
-                      <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                        <div className="flex items-center gap-1">
-                          <Eye className="w-3 h-3 flex-shrink-0" />
-                          <span>{formatNumber(video.viewCount)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <ThumbsUp className="w-3 h-3 flex-shrink-0" />
-                          <span>{formatNumber(video.likeCount)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MessageSquare className="w-3 h-3 flex-shrink-0" />
-                          <span>{formatNumber(video.commentCount)}</span>
-                        </div>
-                      </div>
-
-                      {/* 日付 */}
-                      <div className="text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate">{formatDate(video.publishedAt, language)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  />
                 )
               })}
             </div>
