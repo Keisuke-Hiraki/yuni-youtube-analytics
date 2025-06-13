@@ -48,7 +48,12 @@ YuNiの動画パフォーマンスを人気度、エンゲージメント、再�
    `.env.local`ファイルを作成し、以下の環境変数を設定してください：
    ```env
    YOUTUBE_API_KEY=your_youtube_api_key_here
+   YOUTUBE_CHANNEL_ID=your_channel_id_here
    GROQ_API_KEY=your_groq_api_key_here
+   GEMINI_API_KEY=your_gemini_api_key_here
+   UPSTASH_VECTOR_REST_URL=your_upstash_vector_url_here
+   UPSTASH_VECTOR_REST_TOKEN=your_upstash_vector_token_here
+   ADMIN_API_KEY=your_admin_api_key_here
    ```
 
 4. **開発サーバーの起動**
@@ -88,6 +93,8 @@ YuNiの動画パフォーマンスを人気度、エンゲージメント、再�
 - `pnpm build` - プロダクションビルド
 - `pnpm start` - プロダクションサーバーの起動
 - `pnpm lint` - ESLintによるコードチェック
+- `pnpm index-videos` - Vector DBに動画データをインデックス
+- `pnpm validate-index` - Vector DBのデータ検証とクリーンアップ
 
 ## 🌐 デプロイ
 
@@ -109,7 +116,25 @@ YuNiの動画パフォーマンスを人気度、エンゲージメント、再�
 - **統計情報**: 「一番人気の動画は？」「再生回数の多い動画は？」など
 - **質問応答**: YuNiの動画に関する様々な質問に回答
 
-チャットボットはGroq APIのLlama 3.1 70Bモデルを使用し、動画データベースから関連情報を検索して回答します。
+チャットボットはGroq APIのLlama 3.3 70Bモデルを使用し、RAG（Retrieval-Augmented Generation）システムで動画データベースから関連情報を検索して回答します。
+
+### RAGシステム
+
+- **Vector DB**: Upstash Vectorを使用した高速な意味検索
+- **埋め込み**: Google Gemini text-embedding-004モデル
+- **検索の種類**:
+  - 一般検索: タイトルや説明文による意味的検索
+  - 統計検索: 再生回数やいいね数を考慮した統計的検索
+
+### Vector DBの管理
+
+```bash
+# 動画データをVector DBにインデックス
+pnpm index-videos
+
+# データの検証とクリーンアップ
+pnpm validate-index
+```
 
 ## 📊 データ更新について
 

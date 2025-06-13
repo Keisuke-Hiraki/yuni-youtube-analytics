@@ -42,7 +42,19 @@ async function main() {
       totalVectors: updatedStatus.totalVectors
     })
     
-    console.log('🎉 すべての処理が完了しました！')
+    // 詳細統計を表示
+    if (updatedStatus.totalVectors > 0) {
+      console.log('\n📈 インデックス詳細:')
+      console.log(`  - 総ベクトル数: ${updatedStatus.totalVectors}`)
+      console.log(`  - 推定動画数: ${Math.floor(updatedStatus.totalVectors / 2)} (通常版 + 統計版)`)
+      console.log(`  - 処理済み動画: ${videos.length}`)
+      console.log(`  - 成功率: ${Math.round((updatedStatus.totalVectors / (videos.length * 2)) * 100)}%`)
+    }
+    
+    console.log('\n🎉 すべての処理が完了しました！')
+    console.log('\n💡 次のステップ:')
+    console.log('  - npm run validate-index でデータ検証を実行できます')
+    console.log('  - チャットボット機能でRAG検索をテストしてください')
   } catch (error) {
     debugError('インデックス処理エラー:', error)
     console.error('❌ エラーが発生しました:', error)
