@@ -47,14 +47,28 @@ YuNiの動画パフォーマンスを人気度、エンゲージメント、再�
    
    `.env.local`ファイルを作成し、以下の環境変数を設定してください：
    ```env
+   # 必須
    YOUTUBE_API_KEY=your_youtube_api_key_here
    YOUTUBE_CHANNEL_ID=your_channel_id_here
-   GROQ_API_KEY=your_groq_api_key_here
+   
+   # チャットボット機能（オプション）
+   ENABLE_CHATBOT=true                    # チャットボット機能の有効/無効
+   GROQ_API_KEY=your_groq_api_key_here   # Groq APIキー
+   
+   # RAG機能（オプション）
    GEMINI_API_KEY=your_gemini_api_key_here
    UPSTASH_VECTOR_REST_URL=your_upstash_vector_url_here
    UPSTASH_VECTOR_REST_TOKEN=your_upstash_vector_token_here
+   
+   # 管理機能（オプション）
    ADMIN_API_KEY=your_admin_api_key_here
    ```
+
+   ### チャットボット機能の制御
+   
+   - `ENABLE_CHATBOT=false`: チャットボット機能を完全に無効化
+   - `ENABLE_CHATBOT=true` または未設定: `GROQ_API_KEY`の存在で自動判定
+   - `GROQ_API_KEY`未設定: チャットボタンが非表示になり、API呼び出しでエラーメッセージ
 
 4. **開発サーバーの起動**
    ```bash

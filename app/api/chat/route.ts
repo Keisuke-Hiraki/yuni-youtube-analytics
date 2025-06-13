@@ -3,14 +3,30 @@ import { generateChatResponse } from '@/lib/groq'
 import { fetchYuNiVideos } from '@/app/actions'
 import { debugLog, debugError } from '@/lib/utils'
 
+// チャットボット有効性チェック関数
+function isChatbotEnabled(): boolean {
+  const enableChatbot = process.env.ENABLE_CHATBOT
+  const hasGroqKey = !!process.env.GROQ_API_KEY
+  
+  // ENABLE_CHATBOTが明示的にfalseの場合は無効
+  if (enableChatbot === 'false') {
+    return false
+  }
+  
+  // ENABLE_CHATBOTがtrueまたは未設定の場合、APIキーの存在で判定
+  return hasGroqKey
+}
+
 // テスト用のGETエンドポイント
 export async function GET() {
   return NextResponse.json({ 
     message: 'Chat API is working',
     timestamp: new Date().toISOString(),
+    enabled: isChatbotEnabled(),
     env: {
       hasGroqKey: !!process.env.GROQ_API_KEY,
-      hasYouTubeKey: !!process.env.YOUTUBE_API_KEY
+      hasYouTubeKey: !!process.env.YOUTUBE_API_KEY,
+      enableChatbot: process.env.ENABLE_CHATBOT || 'undefined'
     }
   })
 }
@@ -19,6 +35,14 @@ export async function POST(request: NextRequest) {
   debugLog('チャットAPI呼び出し開始')
   
   try {
+    // チャットボット有効性チェック
+    if (!isChatbotEnabled()) {
+      return NextResponse.json(
+        { error: 'チャットボット機能は現在無効になっています。' },
+        { status: 503 }
+      )
+    }
+
     // リクエストボディの解析
     let requestBody
     try {
