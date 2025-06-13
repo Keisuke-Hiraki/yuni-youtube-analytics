@@ -283,6 +283,12 @@ export async function generateChatResponse(
       videosCount: videos.length
     })
 
+    // チャットボット有効性チェック
+    const enableChatbot = process.env.ENABLE_CHATBOT
+    if (enableChatbot === 'false') {
+      return 'チャットボット機能は現在無効になっています。管理者にお問い合わせください。'
+    }
+
     const GROQ_API_KEY = process.env.GROQ_API_KEY
     
     if (!GROQ_API_KEY) {

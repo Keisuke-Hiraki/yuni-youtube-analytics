@@ -7,6 +7,22 @@ import { ChatDialog } from './chat-dialog'
 
 export function ChatButton() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isChatbotEnabled, setIsChatbotEnabled] = useState<boolean | null>(null)
+
+  // チャットボット有効性をチェック
+  useEffect(() => {
+    const checkChatbotStatus = async () => {
+      try {
+        const response = await fetch('/api/chat/status')
+        const data = await response.json()
+        setIsChatbotEnabled(data.enabled)
+      } catch (error) {
+        console.error('チャットボット状態の確認に失敗:', error)
+        setIsChatbotEnabled(false)
+      }
+    }
+    checkChatbotStatus()
+  }, [])
 
   // サイドパネルの開閉状態をbodyのクラスに反映
   useEffect(() => {
@@ -21,6 +37,11 @@ export function ChatButton() {
       document.body.classList.remove('chat-panel-open')
     }
   }, [isOpen])
+
+  // チャットボットが無効または確認中の場合は何も表示しない
+  if (isChatbotEnabled === null || !isChatbotEnabled) {
+    return null
+  }
 
   return (
     <>
