@@ -566,19 +566,22 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                       scale: { duration: 0.2, ease: "easeInOut" },
                       y: { duration: 0.2, ease: "easeInOut" }
                     }}
-                    className={`w-full flex gap-2 sm:gap-4 p-2 sm:p-3 border-2 ${borderClasses[color]} ${isHovered ? glowClasses[color] : ''} rounded-lg cursor-pointer transition-all duration-300 ease-in-out bg-vinyl-black/80 backdrop-blur-sm active:scale-98 ${
+                    className={`relative w-full flex gap-3 sm:gap-4 p-3 sm:p-4 border-2 ${borderClasses[color]} ${isHovered ? glowClasses[color] : ''} rounded-lg cursor-pointer transition-all duration-300 ease-in-out bg-vinyl-black/80 backdrop-blur-sm active:scale-98 ${
                       clickedCardId === video.id ? "click-animation" : ""
-                    } ${isHovered ? 'shadow-2xl' : 'shadow-lg'}`}
+                    } ${isHovered ? 'shadow-2xl' : 'shadow-lg'} hover:border-opacity-100`}
                     onClick={() => handleVideoClick(video)}
                     onContextMenu={preventContextMenu}
                     onMouseEnter={() => setHoveredItemId(video.id)}
-                    onMouseLeave={() => setHoveredItemId(null)}
+                    onMouseLeave={() => {
+                      setHoveredItemId(null)
+                      setHoveredPlayButtonId(null)
+                    }}
                   >
                     {/* グロー効果 */}
                     <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-${color}/10 to-transparent rounded-lg transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-50'}`} />
                     
-                    <div className="relative flex-shrink-0 w-[120px] sm:w-[160px] z-10">
-                      <div className="aspect-video w-full overflow-hidden rounded-md">
+                    <div className="relative flex-shrink-0 w-[30%] sm:w-[25%] max-w-[200px] z-10">
+                      <div className="aspect-video w-full overflow-hidden rounded-md relative">
                         <Image
                           src={video.thumbnailUrl || "/placeholder.svg?height=90&width=160"}
                           alt={video.title}
@@ -610,7 +613,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                                 damping: 20
                               }
                             }}
-                            className={`w-12 h-12 rounded-full ${bgClasses[color]} flex items-center justify-center ${glowClasses[color]} relative overflow-hidden`}
+                            className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${bgClasses[color]} flex items-center justify-center ${glowClasses[color]} relative overflow-hidden`}
                           >
                             <motion.div
                               initial={{ scale: 1 }}
@@ -621,62 +624,65 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                               transition={{ duration: 0.6 }}
                               className="absolute inset-0 rounded-full bg-white/20"
                             />
-                            <span className="text-black text-lg ml-0.5 relative z-10">▶</span>
+                            <span className="text-black text-sm sm:text-lg ml-0.5 relative z-10">▶</span>
                           </motion.div>
                         </div>
-                      </div>
-                      <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
-                        {formatDuration(video.duration)}
-                      </div>
-                      <div className="absolute top-1 left-1 bg-black/80 text-white text-xs px-2 py-1 rounded-full">
-                        #{index + 1}
-                      </div>
-                      {video.isShort && (
-                        <div className="absolute top-1 right-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                          #shorts
+                        
+                        {/* 動画情報オーバーレイ */}
+                        <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
+                          {formatDuration(video.duration)}
                         </div>
-                      )}
-                      {viewCountTag && (
-                        <div
-                          className={`absolute bottom-1 left-1 ${viewCountTag.color} text-xs px-2 py-0.5 rounded-full font-medium shadow-md`}
-                          style={{
-                            backgroundColor: viewCountTag.label.includes("100M")
-                              ? "#22d3ee"
-                              : viewCountTag.label.includes("10M")
-                                ? "#facc15"
-                                : viewCountTag.label.includes("1M")
-                                  ? "#d1d5db"
-                                  : "#d97706",
-                            color:
-                              viewCountTag.label.includes("100M") ||
-                              viewCountTag.label.includes("10M") ||
-                              viewCountTag.label.includes("1M")
-                                ? "#1e293b"
-                                : "#ffffff",
-                          }}
-                        >
-                          {viewCountTag.label}
+                        <div className="absolute top-1 left-1 bg-black/80 text-white text-xs px-2 py-1 rounded-full">
+                          #{index + 1}
                         </div>
-                      )}
+                        {video.isShort && (
+                          <div className="absolute top-1 right-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                            #shorts
+                          </div>
+                        )}
+                        {viewCountTag && (
+                          <div
+                            className={`absolute bottom-1 left-1 ${viewCountTag.color} text-xs px-2 py-0.5 rounded-full font-medium shadow-md`}
+                            style={{
+                              backgroundColor: viewCountTag.label.includes("100M")
+                                ? "#22d3ee"
+                                : viewCountTag.label.includes("10M")
+                                  ? "#facc15"
+                                  : viewCountTag.label.includes("1M")
+                                    ? "#d1d5db"
+                                    : "#d97706",
+                              color:
+                                viewCountTag.label.includes("100M") ||
+                                viewCountTag.label.includes("10M") ||
+                                viewCountTag.label.includes("1M")
+                                  ? "#1e293b"
+                                  : "#ffffff",
+                            }}
+                          >
+                            {viewCountTag.label}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-grow min-w-0 overflow-hidden relative z-10">
-                      <NeonText size="sm" color={color} className="line-clamp-2 text-left mb-2" animate={false}>
+                    
+                    <div className="flex-grow min-w-0 overflow-hidden relative z-10 w-[70%] sm:w-[75%]">
+                      <NeonText size="sm" color={color} className="line-clamp-2 text-left mb-2 sm:mb-3" animate={false}>
                         {video.title}
                       </NeonText>
-                      <div className="grid grid-cols-3 gap-y-1 text-xs sm:text-sm text-muted-foreground">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-1 sm:gap-y-2 text-xs sm:text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Eye className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                          <span>{formatNumber(video.viewCount)}</span>
+                          <span className="truncate">{formatNumber(video.viewCount)}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <ThumbsUp className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                          <span>{formatNumber(video.likeCount)}</span>
+                          <span className="truncate">{formatNumber(video.likeCount)}</span>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 col-span-2 sm:col-span-1">
                           <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                          <span>{formatNumber(video.commentCount)}</span>
+                          <span className="truncate">{formatNumber(video.commentCount)}</span>
                         </div>
-                        <div className="flex items-center gap-1 col-span-3 mt-1">
+                        <div className="flex items-center gap-1 col-span-2 sm:col-span-3 mt-1">
                           <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                           <span className="truncate">{formatDate(video.publishedAt, language)}</span>
                         </div>

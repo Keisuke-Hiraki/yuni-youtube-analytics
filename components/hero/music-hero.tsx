@@ -4,26 +4,8 @@ import { motion } from 'framer-motion'
 import { NeonText } from '@/components/neon/neon-text'
 import { AudioVisualizer } from '@/components/music/audio-visualizer'
 import { VinylRecord } from '@/components/music/vinyl-record'
-import { useEffect, useState } from 'react'
 
 export const MusicHero = () => {
-  const [notes, setNotes] = useState<Array<{ id: number; x: number; y: number; delay: number }>>([])
-
-  useEffect(() => {
-    // 浮遊する音符を生成
-    const generateNotes = () => {
-      const newNotes = Array.from({ length: 20 }, (_, i) => ({
-        id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        delay: Math.random() * 2
-      }))
-      setNotes(newNotes)
-    }
-
-    generateNotes()
-  }, [])
-
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-music-darker via-music-dark to-vinyl-black">
       {/* 背景エフェクト */}
@@ -76,27 +58,6 @@ export const MusicHero = () => {
           <VinylRecord size="sm" />
         </div>
       </div>
-
-      {/* 浮遊する音符 */}
-      {notes.map((note) => (
-        <motion.div
-          key={note.id}
-          className="absolute text-neon-green text-2xl opacity-30 floating-notes"
-          style={{
-            left: `${note.x}%`,
-            top: `${note.y}%`,
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0.3, 0.7, 0.3] }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            delay: note.delay,
-          }}
-        >
-          ♪
-        </motion.div>
-      ))}
 
       {/* スクロールインジケーター */}
       <motion.div
