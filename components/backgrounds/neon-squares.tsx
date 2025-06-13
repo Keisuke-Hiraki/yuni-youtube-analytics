@@ -42,7 +42,7 @@ export const NeonSquares = () => {
 
     const createSquares = () => {
       const squares: Square[] = []
-      const squareCount = Math.floor((window.innerWidth * window.innerHeight) / 20000) // 密度調整
+      const squareCount = Math.floor((window.innerWidth * window.innerHeight) / 30000) // 密度を下げてパフォーマンス向上
 
       for (let i = 0; i < squareCount; i++) {
         squares.push({
@@ -78,9 +78,9 @@ export const NeonSquares = () => {
         ctx.translate(square.x + square.size / 2, square.y + square.size / 2)
         ctx.rotate((square.rotation * Math.PI) / 180)
         
-        // ネオングロー効果
+        // ネオングロー効果（軽量化）
         ctx.shadowColor = square.color
-        ctx.shadowBlur = 12
+        ctx.shadowBlur = 8
         ctx.globalAlpha = square.opacity
         
         // 正方形を描画

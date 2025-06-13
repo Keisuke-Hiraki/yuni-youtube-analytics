@@ -37,7 +37,7 @@ export const FloatingParticles = () => {
 
     const createParticles = () => {
       const particles: Particle[] = []
-      const particleCount = Math.floor((window.innerWidth * window.innerHeight) / 25000)
+      const particleCount = Math.floor((window.innerWidth * window.innerHeight) / 40000) // 密度を下げてパフォーマンス向上
 
       for (let i = 0; i < particleCount; i++) {
         particles.push({
@@ -74,7 +74,7 @@ export const FloatingParticles = () => {
         ctx.rotate((particle.rotation * Math.PI) / 180)
         
         ctx.shadowColor = particle.color
-        ctx.shadowBlur = 10
+        ctx.shadowBlur = 6
         ctx.globalAlpha = particle.opacity
         ctx.fillStyle = particle.color
         ctx.font = `${particle.size}px Arial`
