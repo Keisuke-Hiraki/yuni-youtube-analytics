@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 
 interface Square {
   x: number
@@ -17,6 +17,8 @@ export const NeonSquares = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationRef = useRef<number | undefined>(undefined)
   const squaresRef = useRef<Square[]>([])
+  const lastTimeRef = useRef<number>(0)
+  const fpsLimitRef = useRef<number>(30) // 30FPSに制限
 
   // ネオンカラーパレット（音楽テイスト）
   const neonColors = [
@@ -28,12 +30,24 @@ export const NeonSquares = () => {
     '#ffff00', // ネオンイエロー
   ]
 
+  // パフォーマンス監視
+  const checkPerformance = useCallback(() => {
+    const isLowEnd = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    
+    if (isLowEnd || isMobile) {
+      fpsLimitRef.current = 20 // 低性能デバイスは20FPS
+    }
+  }, [])
+
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+
+    checkPerformance()
 
     const resizeCanvas = () => {
       canvas.width = window.innerWidth
@@ -42,24 +56,35 @@ export const NeonSquares = () => {
 
     const createSquares = () => {
       const squares: Square[] = []
-      const squareCount = Math.floor((window.innerWidth * window.innerHeight) / 30000) // 密度を下げてパフォーマンス向上
+      // 要素数を大幅削減（30000 → 60000に変更）
+      const squareCount = Math.min(
+        Math.floor((window.innerWidth * window.innerHeight) / 60000),
+        50 // 最大50個に制限
+      )
 
       for (let i = 0; i < squareCount; i++) {
         squares.push({
           x: Math.random() * window.innerWidth,
           y: Math.random() * window.innerHeight,
-          size: Math.random() * 25 + 8, // 8-33px
+          size: Math.random() * 20 + 10, // サイズを小さく（10-30px）
           color: neonColors[Math.floor(Math.random() * neonColors.length)],
-          opacity: Math.random() * 0.3 + 0.1, // 0.1-0.4
-          speed: Math.random() * 0.8 + 0.2, // ゆっくりとした動き
+          opacity: Math.random() * 0.25 + 0.15, // 透明度を下げる
+          speed: Math.random() * 0.5 + 0.1, // 速度を遅く
           rotation: Math.random() * 360,
-          rotationSpeed: (Math.random() - 0.5) * 1.5, // -0.75 to 0.75
+          rotationSpeed: (Math.random() - 0.5) * 1, // 回転速度を遅く
         })
       }
       squaresRef.current = squares
     }
 
-    const animate = () => {
+    const animate = (currentTime: number) => {
+      // FPS制限
+      if (currentTime - lastTimeRef.current < 1000 / fpsLimitRef.current) {
+        animationRef.current = requestAnimationFrame(animate)
+        return
+      }
+      lastTimeRef.current = currentTime
+
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
       squaresRef.current.forEach((square) => {
@@ -73,24 +98,26 @@ export const NeonSquares = () => {
           square.x = Math.random() * canvas.width
         }
 
-        // 描画
+        // 描画最適化
         ctx.save()
         ctx.translate(square.x + square.size / 2, square.y + square.size / 2)
         ctx.rotate((square.rotation * Math.PI) / 180)
         
-        // ネオングロー効果（軽量化）
+        // グロー効果を軽量化
         ctx.shadowColor = square.color
-        ctx.shadowBlur = 8
+        ctx.shadowBlur = 4 // 8 → 4に削減
         ctx.globalAlpha = square.opacity
         
         // 正方形を描画
         ctx.fillStyle = square.color
         ctx.fillRect(-square.size / 2, -square.size / 2, square.size, square.size)
         
-        // 内側のハイライト
-        ctx.globalAlpha = square.opacity * 0.4
-        ctx.fillStyle = '#ffffff'
-        ctx.fillRect(-square.size / 4, -square.size / 4, square.size / 2, square.size / 2)
+        // 内側のハイライトを条件付きで描画（パフォーマンス向上）
+        if (square.size > 15) {
+          ctx.globalAlpha = square.opacity * 0.3
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(-square.size / 4, -square.size / 4, square.size / 2, square.size / 2)
+        }
         
         ctx.restore()
       })
@@ -100,7 +127,7 @@ export const NeonSquares = () => {
 
     resizeCanvas()
     createSquares()
-    animate()
+    animationRef.current = requestAnimationFrame(animate)
 
     const handleResize = () => {
       resizeCanvas()
@@ -115,7 +142,7 @@ export const NeonSquares = () => {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [])
+  }, [checkPerformance])
 
   return (
     <canvas
