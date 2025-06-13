@@ -223,18 +223,7 @@
   );
 }
 
-/* 虹色グラデーションアニメーション */
-@keyframes rainbow-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.rainbow-gradient {
-  background: linear-gradient(-45deg, #ff0080, #ff6600, #ffff00, #39ff14, #00ffff, #bf00ff);
-  background-size: 400% 400%;
-  animation: rainbow-shift 5s ease infinite;
-}
+/* 虹色グラデーションアニメーションを削除 - React Bitsエフェクトに置き換え */
 
 /* スクロールバーのスタイリング */
 .custom-scrollbar::-webkit-scrollbar {

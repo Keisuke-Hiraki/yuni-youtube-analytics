@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { Toaster } from "@/components/toaster"
 import { LanguageProvider } from "@/lib/language-context"
 import { ChatButton } from "@/components/chatbot/chat-button"
+import { BackgroundManager } from "@/components/backgrounds/background-manager"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -65,6 +66,8 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <LanguageProvider>
+            {/* ネオン背景エフェクト */}
+            <BackgroundManager />
             <div className="relative flex min-h-screen flex-col">
               <SiteHeader />
               <div className="flex-1">{children}</div>

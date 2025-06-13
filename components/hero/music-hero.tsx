@@ -8,13 +8,7 @@ import { VinylRecord } from '@/components/music/vinyl-record'
 export const MusicHero = () => {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-music-darker via-music-dark to-vinyl-black">
-      {/* 背景エフェクト */}
-      <div 
-        className="absolute inset-0 opacity-10 animate-pulse"
-        style={{
-          background: 'linear-gradient(90deg, #ff0080, #ff6600, #ffff00, #39ff14, #00ffff, #bf00ff)'
-        }}
-      />
+      {/* 虹色背景エフェクトを削除 - React Bitsエフェクトに置き換え */}
       
       {/* メインコンテンツ */}
       <div className="relative z-10 text-center space-y-8 px-4">
