@@ -257,6 +257,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const savedLanguage = localStorage.getItem("language") as Language
     if (savedLanguage && ["ja", "en", "zh", "ko"].includes(savedLanguage)) {
       setLanguage(savedLanguage)
+    } else {
+      // デフォルトを日本語に設定（モバイル含む）
+      setLanguage("ja")
+      localStorage.setItem("language", "ja")
     }
   }, [])
 

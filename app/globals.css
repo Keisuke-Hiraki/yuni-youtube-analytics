@@ -20,8 +20,8 @@
     --accent-foreground: 0 0% 5%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 222.2 84% 15%;
-    --input: 222.2 84% 15%;
+    --border: 222.2 84% 20%;
+    --input: 222.2 84% 20%;
     --ring: 300 100% 50%;
     --radius: 0.5rem;
 
@@ -59,8 +59,8 @@
     --accent-foreground: 0 0% 5%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 222.2 84% 12%;
-    --input: 222.2 84% 12%;
+    --border: 222.2 84% 18%;
+    --input: 222.2 84% 18%;
     --ring: 300 100% 60%;
   }
 }
@@ -285,6 +285,21 @@
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
   }
+}
+
+/* フォーム要素の境界線強化 */
+.form-element-enhanced {
+  border-width: 2px;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.form-element-enhanced:hover {
+  border-color: hsl(var(--muted-foreground));
+}
+
+.form-element-enhanced:focus,
+.form-element-enhanced:focus-visible {
+  border-color: hsl(var(--primary));
 }
 
 /* タッチデバイス用のホバー効果無効化 */

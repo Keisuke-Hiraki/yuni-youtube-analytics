@@ -1,6 +1,6 @@
 export function SiteFooter() {
   return (
-    <footer className="w-full py-4 border-t mt-8">
+    <footer className="w-full py-4 border-t mt-8 bg-background">
       <div className="max-w-screen-xl mx-auto flex justify-center items-center px-4 md:px-6">
         <p className="text-sm text-muted-foreground">
           powered by{" "}
