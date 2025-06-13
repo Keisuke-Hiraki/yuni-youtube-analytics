@@ -17,12 +17,12 @@ export async function generateMetadata(): Promise<Metadata> {
   // 動的なメタデータを生成
   return {
     title: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
-    description: `YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
+    description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
       channelInfo ? `チャンネル登録者数: ${channelInfo.subscriberCount.toLocaleString()}人` : ""
     }`,
     openGraph: {
       title: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
-      description: `YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
+      description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
         channelInfo ? `チャンネル登録者数: ${channelInfo.subscriberCount.toLocaleString()}人` : ""
       }`,
       images: [
@@ -37,7 +37,7 @@ export async function generateMetadata(): Promise<Metadata> {
     twitter: {
       card: "summary_large_image",
       title: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
-      description: `YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
+      description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
         channelInfo ? `チャンネル登録者数: ${channelInfo.subscriberCount.toLocaleString()}人` : ""
       }`,
       images: ["/og-image.png"],

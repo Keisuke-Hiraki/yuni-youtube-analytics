@@ -1,6 +1,6 @@
 # YuNi Stellar Chart
 
-YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング表示するNext.jsアプリケーションです。
+Vsinger YuNiの動画をランキング表示するNext.jsアプリケーションです。
 
 ## 🌟 機能
 

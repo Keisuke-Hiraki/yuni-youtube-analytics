@@ -34,7 +34,7 @@ export const MusicHero = () => {
           transition={{ delay: 0.5, duration: 1 }}
           className="text-xl text-gray-300 max-w-2xl mx-auto"
         >
-          YuNiの動画パフォーマンスを人気度、エンゲージメント、再生数でランキング
+                      Vsinger YuNiの動画をランキング
         </motion.p>
 
         {/* ビジュアライザー */}
