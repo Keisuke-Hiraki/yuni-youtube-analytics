@@ -17,11 +17,12 @@ export const MusicHero = () => {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
+          className="flex flex-col items-center"
         >
-          <NeonText size="xl" color="pink" className="mb-4">
+          <NeonText size="xl" color="pink" className="mb-2" animate={false}>
             YuNi
           </NeonText>
-          <NeonText size="lg" color="cyan">
+          <NeonText size="lg" color="cyan" animate={false}>
             Stellar Chart
           </NeonText>
         </motion.div>
