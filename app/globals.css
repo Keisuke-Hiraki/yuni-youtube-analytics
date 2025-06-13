@@ -236,10 +236,11 @@
   animation: rainbow-shift 5s ease infinite;
 }
 
-/* 縦回転スクロール効果 */
+/* 縦回転スクロール効果（修正版） */
 .vertical-scroll-container {
   perspective: 1000px;
   transform-style: preserve-3d;
+  overflow-x: visible; /* 横方向のオーバーフローを許可 */
 }
 
 .vertical-scroll-container::-webkit-scrollbar {
@@ -260,4 +261,61 @@
 .vertical-scroll-container::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(45deg, var(--neon-cyan), var(--neon-green));
   box-shadow: 0 0 15px var(--neon-cyan);
+}
+
+/* ホバーエフェクト用のスムーズトランジション */
+.hover-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 楽曲チャート風の回転アニメーション */
+@keyframes vinyl-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vinyl-spin {
+  animation: vinyl-spin 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* モバイル最適化 */
+@media (max-width: 768px) {
+  .vertical-scroll-container {
+    perspective: none;
+    transform-style: flat;
+  }
+  
+  .neon-glow-pink,
+  .neon-glow-cyan,
+  .neon-glow-green,
+  .neon-glow-purple {
+    box-shadow: 0 0 5px currentColor, 0 0 10px currentColor; /* モバイルでは控えめなグロー */
+  }
+  
+  /* モバイルでのタッチ操作最適化 */
+  .mobile-touch-target {
+    min-height: 44px; /* iOS推奨のタッチターゲットサイズ */
+    min-width: 44px;
+  }
+  
+  /* モバイルでのスクロール最適化 */
+  .mobile-scroll-container {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
+/* タッチデバイス用のホバー効果無効化 */
+@media (hover: none) and (pointer: coarse) {
+  .hover\:scale-105:hover {
+    transform: none;
+  }
+  
+  .hover\:shadow-2xl:hover {
+    box-shadow: inherit;
+  }
 }

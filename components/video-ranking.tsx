@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useMemo, useEffect, useRef } from "react"
 import Image from "next/image"
 import { motion } from "framer-motion"
@@ -103,7 +102,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     }
   }, [filterSheetOpen, isMobile])
 
-  // スクロール回転効果のイベントハンドラー
+  // スクロール回転効果のイベントハンドラー（修正版）
   useEffect(() => {
     const handleScroll = () => {
       if (listContainerRef.current) {
@@ -117,7 +116,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
 
     const listContainer = listContainerRef.current
     if (listContainer) {
-      listContainer.addEventListener('scroll', handleScroll)
+      listContainer.addEventListener('scroll', handleScroll, { passive: true })
       return () => listContainer.removeEventListener('scroll', handleScroll)
     }
   }, [])
@@ -304,20 +303,20 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-wrap gap-2 items-center w-full sm:w-auto">
+      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'flex-col sm:flex-row gap-4'} items-start sm:items-center justify-between`}>
+        <div className={`flex ${isMobile ? 'flex-col gap-2 w-full' : 'flex-wrap gap-2 items-center w-full sm:w-auto'}`}>
           <Input
             placeholder={t("searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-xs"
+            className={isMobile ? "w-full" : "max-w-xs"}
           />
 
           {isMobile ? (
             // モバイル向けのシートコンポーネント
             <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2 w-full justify-center">
                   <SlidersHorizontal className="h-4 w-4" />
                   {t("filterButton")}
                   {activeFilters > 0 && (
@@ -380,7 +379,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           )}
 
           {activeFilters > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2 sm:mt-0">
+            <div className={`flex ${isMobile ? 'flex-col gap-1 w-full mt-2' : 'flex-wrap gap-1 mt-2 sm:mt-0'}`}>
               {yearFilter !== "all" && (
                 <Badge variant="secondary" className="gap-1 flex items-center">
                   {yearFilter}
@@ -425,10 +424,10 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           )}
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">{t("sortBy")}</span>
+        <div className={`flex items-center gap-2 ${isMobile ? 'w-full' : 'w-full sm:w-auto'}`}>
+          <span className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground whitespace-nowrap`}>{t("sortBy")}</span>
           <Select value={sortField} onValueChange={(value) => handleSort(value as SortField)}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className={isMobile ? "w-full" : "w-full sm:w-[180px]"}>
               <SelectValue placeholder={t("sortBy")} />
             </SelectTrigger>
             <SelectContent>
@@ -441,12 +440,12 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
 
           <Button
             variant="ghost"
-            size="icon"
+            size={isMobile ? "sm" : "icon"}
             onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
             aria-label={sortOrder === "asc" ? "昇順" : "降順"}
             className="active:scale-90 transition-transform"
           >
-            {sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />}
+            {sortOrder === "asc" ? <ChevronUp className={isMobile ? "h-4 w-4" : ""} /> : <ChevronDown className={isMobile ? "h-4 w-4" : ""} />}
           </Button>
         </div>
       </div>
@@ -473,18 +472,18 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
         </div>
       ) : (
         <Tabs defaultValue="grid" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="grid" className="transition-transform active:scale-95">
-              {t("gridView")}
+          <TabsList className={`mb-4 ${isMobile ? 'w-full' : ''}`}>
+            <TabsTrigger value="grid" className={`transition-transform active:scale-95 ${isMobile ? 'flex-1' : ''}`}>
+              {isMobile ? t("grid") : t("gridView")}
             </TabsTrigger>
-            <TabsTrigger value="list" className="transition-transform active:scale-95">
-              {t("listView")}
+            <TabsTrigger value="list" className={`transition-transform active:scale-95 ${isMobile ? 'flex-1' : ''}`}>
+              {isMobile ? t("list") : t("listView")}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="grid" className="w-full">
-            {/* ネオンカードを使用したグリッドレイアウト */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
+            {/* ネオンカードを使用したグリッドレイアウト（モバイル最適化） */}
+            <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8'}`}>
               {sortedVideos.map((video, index) => {
                 // YouTubeVideoをNeonVideoCardが期待する形式に変換
                 const neonVideo = {
@@ -513,19 +512,19 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           <TabsContent value="list" className="w-full">
             <div 
               ref={listContainerRef}
-              className="space-y-3 md:space-y-4 max-h-[80vh] overflow-y-auto scroll-smooth vertical-scroll-container w-full"
+              className={`space-y-2 sm:space-y-3 md:space-y-4 max-h-[80vh] overflow-y-auto scroll-smooth vertical-scroll-container w-full ${isMobile ? 'px-1' : 'px-2'}`}
               style={{
-                transform: `perspective(1000px) rotateX(${scrollRotation * 0.1}deg)`,
-                transformStyle: 'preserve-3d',
-                transition: 'transform 0.1s ease-out'
+                transform: isMobile ? 'none' : `perspective(1000px) rotateX(${scrollRotation * 0.05}deg)`,
+                transformStyle: isMobile ? 'flat' : 'preserve-3d',
+                transition: isMobile ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
               {sortedVideos.map((video, index) => {
                 const viewCountTag = getViewCountTag(video.viewCount)
                 const neonColors = ['pink', 'cyan', 'green', 'purple', 'orange'] as const
                 const color = neonColors[index % neonColors.length]
-                const isHovered = hoveredItemId === video.id
-                const isPlayButtonHovered = hoveredPlayButtonId === video.id
+                const isHovered = !isMobile && hoveredItemId === video.id
+                const isPlayButtonHovered = !isMobile && hoveredPlayButtonId === video.id
                 
                 const glowClasses = {
                   pink: 'neon-glow-pink',
@@ -554,7 +553,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                 return (
                   <motion.div
                     key={video.id}
-                    initial={{ opacity: 0, x: -50 }}
+                    initial={{ opacity: 0, x: isMobile ? 0 : -50 }}
                     animate={{ 
                       opacity: 1, 
                       x: 0,
@@ -562,25 +561,31 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                       y: isHovered ? -4 : 0
                     }}
                     transition={{ 
-                      delay: index * 0.05,
-                      scale: { duration: 0.2, ease: "easeInOut" },
-                      y: { duration: 0.2, ease: "easeInOut" }
+                      delay: isMobile ? 0 : index * 0.05,
+                      scale: { duration: 0.3, ease: "easeOut" },
+                      y: { duration: 0.3, ease: "easeOut" },
+                      opacity: { duration: 0.2 },
+                      x: { duration: 0.4, ease: "easeOut" }
                     }}
-                    className={`relative w-full flex gap-3 sm:gap-4 p-3 sm:p-4 border-2 ${borderClasses[color]} ${isHovered ? glowClasses[color] : ''} rounded-lg cursor-pointer transition-all duration-300 ease-in-out bg-vinyl-black/80 backdrop-blur-sm active:scale-98 ${
+                    className={`relative w-full flex gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 md:p-4 border-2 ${borderClasses[color]} ${isHovered ? glowClasses[color] : ''} rounded-lg cursor-pointer transition-all duration-300 ease-out bg-vinyl-black/80 backdrop-blur-sm active:scale-98 ${
                       clickedCardId === video.id ? "click-animation" : ""
-                    } ${isHovered ? 'shadow-2xl' : 'shadow-lg'} hover:border-opacity-100`}
+                    } ${isHovered ? 'shadow-2xl' : 'shadow-lg'} hover:border-opacity-100 ${isMobile ? 'mx-0' : 'mx-1'}`}
                     onClick={() => handleVideoClick(video)}
                     onContextMenu={preventContextMenu}
-                    onMouseEnter={() => setHoveredItemId(video.id)}
+                    onMouseEnter={() => {
+                      if (!isMobile) setHoveredItemId(video.id)
+                    }}
                     onMouseLeave={() => {
-                      setHoveredItemId(null)
-                      setHoveredPlayButtonId(null)
+                      if (!isMobile) {
+                        setHoveredItemId(null)
+                        setHoveredPlayButtonId(null)
+                      }
                     }}
                   >
                     {/* グロー効果 */}
                     <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-${color}/10 to-transparent rounded-lg transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-50'}`} />
                     
-                    <div className="relative flex-shrink-0 w-[30%] sm:w-[25%] max-w-[200px] z-10">
+                    <div className={`relative flex-shrink-0 ${isMobile ? 'w-[35%] max-w-[120px]' : 'w-[30%] sm:w-[25%] max-w-[200px]'} z-10`}>
                       <div className="aspect-video w-full overflow-hidden rounded-md relative">
                         <Image
                           src={video.thumbnailUrl || "/placeholder.svg?height=90&width=160"}
@@ -591,11 +596,9 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                           onContextMenu={preventContextMenu}
                           draggable={false}
                         />
-                        {/* 再生ボタンオーバーレイ */}
+                        {/* 再生ボタンオーバーレイ（モバイル最適化版） */}
                         <div 
-                          className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
-                          onMouseEnter={() => setHoveredPlayButtonId(video.id)}
-                          onMouseLeave={() => setHoveredPlayButtonId(null)}
+                          className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${isHovered || isMobile ? 'opacity-100' : 'opacity-0'}`}
                         >
                           <motion.div
                             animate={{
@@ -604,16 +607,16 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                             transition={{ duration: 0.2, ease: "easeInOut" }}
                             whileTap={{ 
                               scale: 0.9,
-                              rotate: 360,
+                              rotate: isMobile ? 0 : 360,
                               transition: { 
-                                duration: 0.6, 
-                                ease: "easeInOut",
-                                type: "spring",
-                                stiffness: 300,
-                                damping: 20
+                                duration: isMobile ? 0.2 : 0.8,
+                                ease: [0.4, 0, 0.2, 1],
+                                type: "tween"
                               }
                             }}
-                            className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${bgClasses[color]} flex items-center justify-center ${glowClasses[color]} relative overflow-hidden`}
+                            className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10 sm:w-12 sm:h-12'} rounded-full ${bgClasses[color]} flex items-center justify-center ${glowClasses[color]} relative overflow-hidden`}
+                            onMouseEnter={() => !isMobile && setHoveredPlayButtonId(video.id)}
+                            onMouseLeave={() => !isMobile && setHoveredPlayButtonId(null)}
                           >
                             <motion.div
                               initial={{ scale: 1 }}
@@ -621,22 +624,22 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                                 scale: [1, 1.5, 1],
                                 opacity: [1, 0.7, 1]
                               }}
-                              transition={{ duration: 0.6 }}
+                              transition={{ duration: isMobile ? 0.2 : 0.8 }}
                               className="absolute inset-0 rounded-full bg-white/20"
                             />
-                            <span className="text-black text-sm sm:text-lg ml-0.5 relative z-10">▶</span>
+                            <span className={`text-black ${isMobile ? 'text-xs' : 'text-sm sm:text-lg'} ml-0.5 relative z-10`}>▶</span>
                           </motion.div>
                         </div>
                         
-                        {/* 動画情報オーバーレイ */}
-                        <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1 py-0.5 rounded">
+                        {/* 動画情報オーバーレイ（モバイル最適化） */}
+                        <div className={`absolute bottom-1 right-1 bg-black/80 text-white ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-1 py-0.5'} rounded`}>
                           {formatDuration(video.duration)}
                         </div>
-                        <div className="absolute top-1 left-1 bg-black/80 text-white text-xs px-2 py-1 rounded-full">
+                        <div className={`absolute top-1 left-1 bg-black/80 text-white ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-1'} rounded-full`}>
                           #{index + 1}
                         </div>
                         {video.isShort && (
-                          <div className="absolute top-1 right-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                          <div className={`absolute top-1 right-1 bg-red-500 text-white ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-0.5'} rounded-full`}>
                             #shorts
                           </div>
                         )}
@@ -665,25 +668,30 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                       </div>
                     </div>
                     
-                    <div className="flex-grow min-w-0 overflow-hidden relative z-10 w-[70%] sm:w-[75%]">
-                      <NeonText size="sm" color={color} className="line-clamp-2 text-left mb-2 sm:mb-3" animate={false}>
+                    <div className={`flex-grow min-w-0 overflow-hidden relative z-10 ${isMobile ? 'w-[65%]' : 'w-[70%] sm:w-[75%]'}`}>
+                      <NeonText 
+                        size="sm" 
+                        color={color} 
+                        className={`${isMobile ? 'line-clamp-2 text-left mb-1 text-sm' : 'line-clamp-2 text-left mb-2 sm:mb-3'}`} 
+                        animate={false}
+                      >
                         {video.title}
                       </NeonText>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-1 sm:gap-y-2 text-xs sm:text-sm text-muted-foreground">
+                      <div className={`grid ${isMobile ? 'grid-cols-2 gap-y-1' : 'grid-cols-2 sm:grid-cols-3 gap-y-1 sm:gap-y-2'} ${isMobile ? 'text-xs' : 'text-xs sm:text-sm'} text-muted-foreground`}>
                         <div className="flex items-center gap-1">
-                          <Eye className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                          <Eye className={`${isMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} flex-shrink-0`} />
                           <span className="truncate">{formatNumber(video.viewCount)}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <ThumbsUp className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                          <ThumbsUp className={`${isMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} flex-shrink-0`} />
                           <span className="truncate">{formatNumber(video.likeCount)}</span>
                         </div>
-                        <div className="flex items-center gap-1 col-span-2 sm:col-span-1">
-                          <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                        <div className={`flex items-center gap-1 ${isMobile ? 'col-span-2' : 'col-span-2 sm:col-span-1'}`}>
+                          <MessageSquare className={`${isMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} flex-shrink-0`} />
                           <span className="truncate">{formatNumber(video.commentCount)}</span>
                         </div>
-                        <div className="flex items-center gap-1 col-span-2 sm:col-span-3 mt-1">
-                          <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                        <div className={`flex items-center gap-1 ${isMobile ? 'col-span-2 mt-0.5' : 'col-span-2 sm:col-span-3 mt-1'}`}>
+                          <Clock className={`${isMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} flex-shrink-0`} />
                           <span className="truncate">{formatDate(video.publishedAt, language)}</span>
                         </div>
                       </div>
