@@ -59,10 +59,12 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
   const [activeFilters, setActiveFilters] = useState<number>(0)
   const [clickedCardId, setClickedCardId] = useState<string | null>(null)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+  const [scrollRotation, setScrollRotation] = useState(0)
 
   // フィルターメニューの参照を作成
   const filterMenuRef = useRef<HTMLDivElement>(null)
   const filterButtonRef = useRef<HTMLButtonElement>(null)
+  const listContainerRef = useRef<HTMLDivElement>(null)
 
   // モバイル判定
   const isMobile = useMediaQuery("(max-width: 768px)")
@@ -98,6 +100,25 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
       document.removeEventListener("mouseup", handleOutsideClick)
     }
   }, [filterSheetOpen, isMobile])
+
+  // スクロール回転効果のイベントハンドラー
+  useEffect(() => {
+    const handleScroll = () => {
+      if (listContainerRef.current) {
+        const scrollTop = listContainerRef.current.scrollTop
+        const maxScroll = listContainerRef.current.scrollHeight - listContainerRef.current.clientHeight
+        const scrollProgress = scrollTop / maxScroll
+        const rotation = scrollProgress * 360 * 2 // 2回転
+        setScrollRotation(rotation)
+      }
+    }
+
+    const listContainer = listContainerRef.current
+    if (listContainer) {
+      listContainer.addEventListener('scroll', handleScroll)
+      return () => listContainer.removeEventListener('scroll', handleScroll)
+    }
+  }, [])
 
   // 右クリックを防止する関数
   const preventContextMenu = (e: React.MouseEvent) => {
@@ -488,7 +509,15 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           </TabsContent>
 
           <TabsContent value="list" className="w-full">
-            <div className="space-y-3 md:space-y-4">
+            <div 
+              ref={listContainerRef}
+              className="space-y-3 md:space-y-4 max-h-[80vh] overflow-y-auto scroll-smooth vertical-scroll-container"
+              style={{
+                transform: `perspective(1000px) rotateX(${scrollRotation * 0.1}deg)`,
+                transformStyle: 'preserve-3d',
+                transition: 'transform 0.1s ease-out'
+              }}
+            >
               {sortedVideos.map((video, index) => {
                 const viewCountTag = getViewCountTag(video.viewCount)
                 const neonColors = ['pink', 'cyan', 'green', 'purple', 'orange'] as const
