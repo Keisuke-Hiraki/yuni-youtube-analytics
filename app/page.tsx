@@ -25,14 +25,18 @@ export async function generateMetadata(): Promise<Metadata> {
       description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
         channelInfo ? `チャンネル登録者数: ${channelInfo.subscriberCount.toLocaleString()}人` : ""
       }`,
+      url: "https://yuni-stellar-chart.vercel.app",
+      siteName: "YuNi Stellar Chart",
       images: [
         {
-          url: "/og-image.png",
+          url: "https://yuni-stellar-chart.vercel.app/og-image.png",
           width: 1200,
           height: 1200,
           alt: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
         },
       ],
+      locale: "ja_JP",
+      type: "website",
     },
     twitter: {
       card: "summary_large_image",
@@ -40,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
         channelInfo ? `チャンネル登録者数: ${channelInfo.subscriberCount.toLocaleString()}人` : ""
       }`,
-      images: ["/og-image.png"],
+      images: ["https://yuni-stellar-chart.vercel.app/og-image.png"],
     },
   }
 }

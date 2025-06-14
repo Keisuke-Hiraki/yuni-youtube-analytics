@@ -14,6 +14,30 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://yuni-stellar-chart.vercel.app"),
+  title: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
+  description: "Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。",
+  openGraph: {
+    title: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
+    description: "Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。",
+    url: "https://yuni-stellar-chart.vercel.app",
+    siteName: "YuNi Stellar Chart",
+    images: [
+      {
+        url: "https://yuni-stellar-chart.vercel.app/og-image.png",
+        width: 1200,
+        height: 1200,
+        alt: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
+      },
+    ],
+    locale: "ja_JP",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
+    description: "Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。",
+    images: ["https://yuni-stellar-chart.vercel.app/og-image.png"],
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
