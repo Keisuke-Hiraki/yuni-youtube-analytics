@@ -10,6 +10,9 @@ import { debugLog } from '@/lib/utils'
 // キャッシュの有効期限を1時間に設定
 export const revalidate = 3600 // 1時間ごとに自動更新
 
+// 環境変数でヒーローセクションの表示を制御
+const SHOW_HERO_SECTION = process.env.SHOW_HERO_SECTION !== 'false'
+
 export async function generateMetadata(): Promise<Metadata> {
   // チャンネル情報を取得（キャッシュ機能付きの関数を使用）
   const { channelInfo } = await fetchYuNiVideosWithCache()
@@ -53,11 +56,11 @@ export default async function Home() {
 
   return (
     <>
-      {/* ヒーローセクション */}
-      <MusicHero />
+      {/* ヒーローセクション - 環境変数で制御 */}
+      {SHOW_HERO_SECTION && <MusicHero />}
       
       {/* メインコンテンツ */}
-      <main className="max-w-screen-xl mx-auto py-16 px-4 md:px-6 relative z-10">
+      <main className={`max-w-screen-xl mx-auto py-16 px-4 md:px-6 relative z-10 ${!SHOW_HERO_SECTION ? 'pt-24' : ''}`}>
         <SiteDescription totalCount={totalCount} lastUpdated={lastUpdated} channelInfo={channelInfo} />
 
         {error ? (
