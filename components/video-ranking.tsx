@@ -13,6 +13,9 @@ import {
   Filter,
   X,
   SlidersHorizontal,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -36,6 +39,10 @@ import { NeonText } from "@/components/neon/neon-text"
 import { useLanguage } from "@/lib/language-context"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
+// ソートタイプの定義
+type SortField = "default" | "viewCount" | "likeCount" | "commentCount" | "publishedAt"
+type SortOrder = "asc" | "desc"
+
 interface VideoRankingProps {
   initialVideos: YouTubeVideo[]
 }
@@ -48,6 +55,11 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
   const [yearFilter, setYearFilter] = useState<string>("all")
   const [limitCount, setLimitCount] = useState<number>(100)
   const [excludeShorts, setExcludeShorts] = useState<boolean>(false)
+  
+  // ソート機能のstate追加
+  const [sortField, setSortField] = useState<SortField>("default")
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc")
+  
   const [activeFilters, setActiveFilters] = useState<number>(0)
   const [clickedCardId, setClickedCardId] = useState<string | null>(null)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
@@ -112,6 +124,45 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     e.preventDefault()
   }
 
+  // ソート関数の定義
+  const sortVideos = (videos: YouTubeVideo[], field: SortField, order: SortOrder): YouTubeVideo[] => {
+    if (field === "default") {
+      return videos // デフォルトの順序を保持
+    }
+
+    return [...videos].sort((a, b) => {
+      let valueA: number | string
+      let valueB: number | string
+
+      switch (field) {
+        case "viewCount":
+          valueA = a.viewCount || 0
+          valueB = b.viewCount || 0
+          break
+        case "likeCount":
+          valueA = a.likeCount || 0
+          valueB = b.likeCount || 0
+          break
+        case "commentCount":
+          valueA = a.commentCount || 0
+          valueB = b.commentCount || 0
+          break
+        case "publishedAt":
+          valueA = new Date(a.publishedAt).getTime()
+          valueB = new Date(b.publishedAt).getTime()
+          break
+        default:
+          return 0
+      }
+
+      if (order === "asc") {
+        return valueA < valueB ? -1 : valueA > valueB ? 1 : 0
+      } else {
+        return valueA > valueB ? -1 : valueA < valueB ? 1 : 0
+      }
+    })
+  }
+
   // 利用可能な年のリストを取得
   const availableYears = useMemo(() => {
     if (!videos || !Array.isArray(videos) || videos.length === 0) {
@@ -162,19 +213,23 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
       filtered = filtered.filter((video) => video && !video.isShort)
     }
 
-    // 表示件数制限
-    return filtered.slice(0, limitCount)
-  }, [videos, searchQuery, yearFilter, excludeShorts, limitCount])
+    // ソート適用
+    const sorted = sortVideos(filtered, sortField, sortOrder)
 
-  // アクティブなフィルター数を更新
+    // 表示件数制限
+    return sorted.slice(0, limitCount)
+  }, [videos, searchQuery, yearFilter, excludeShorts, limitCount, sortField, sortOrder])
+
+  // アクティブなフィルター数を更新（ソート条件も含める）
   useEffect(() => {
     let count = 0
     if (yearFilter !== "all") count++
     if (limitCount !== 100) count++
     if (searchQuery) count++
     if (excludeShorts) count++
+    if (sortField !== "default") count++
     setActiveFilters(count)
-  }, [yearFilter, limitCount, searchQuery, excludeShorts])
+  }, [yearFilter, limitCount, searchQuery, excludeShorts, sortField])
 
   const handleVideoClick = (video: YouTubeVideo) => {
     // クリックアニメーションのためにIDを設定
@@ -196,6 +251,8 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     setLimitCount(100)
     setSearchQuery("")
     setExcludeShorts(false)
+    setSortField("default")
+    setSortOrder("desc")
     // モバイルの場合はシートを閉じる
     if (isMobile) {
       setFilterSheetOpen(false)
@@ -205,6 +262,39 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
   // フィルター設定UI
   const FilterControls = () => (
     <div className="space-y-4">
+      {/* ソート設定 */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-medium">{t("sortBy")}</h4>
+        <div className="flex gap-2">
+          <Select value={sortField} onValueChange={(value: SortField) => setSortField(value)}>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder={t("sortBy")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">{t("defaultSort")}</SelectItem>
+              <SelectItem value="viewCount">{t("sortByViewCount")}</SelectItem>
+              <SelectItem value="likeCount">{t("sortByLikeCount")}</SelectItem>
+              <SelectItem value="commentCount">{t("sortByCommentCount")}</SelectItem>
+              <SelectItem value="publishedAt">{t("sortByPublishedAt")}</SelectItem>
+            </SelectContent>
+          </Select>
+          {sortField !== "default" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+              className="px-3"
+            >
+              {sortOrder === "asc" ? (
+                <ArrowUp className="h-4 w-4" />
+              ) : (
+                <ArrowDown className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
+
       <div className="space-y-2">
         <h4 className="text-sm font-medium">{t("publishYear")}</h4>
         <Select value={yearFilter} onValueChange={setYearFilter}>
@@ -396,6 +486,16 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                 <Badge variant="secondary" className="gap-1 flex items-center">
                   "{searchQuery}"
                   <Button variant="ghost" size="icon" className="h-4 w-4 p-0 ml-1" onClick={() => setSearchQuery("")}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              )}
+              {/* ソート条件の表示 */}
+              {sortField !== "default" && (
+                <Badge variant="secondary" className="gap-1 flex items-center">
+                  {t(`sortBy${sortField.charAt(0).toUpperCase() + sortField.slice(1)}`)}
+                  {sortOrder === "asc" ? " ↑" : " ↓"}
+                  <Button variant="ghost" size="icon" className="h-4 w-4 p-0 ml-1" onClick={() => setSortField("default")}>
                     <X className="h-3 w-3" />
                   </Button>
                 </Badge>
