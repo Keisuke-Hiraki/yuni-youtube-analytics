@@ -86,7 +86,7 @@
    ADMIN_API_KEY=your_admin_api_key_here
    ```
 
-   ### チャットボット機能の制御
+   ### チャットボット機能の制御 ※現在この機能は工事中です
    
    - `ENABLE_CHATBOT=false`: チャットボット機能を完全に無効化
    - `ENABLE_CHATBOT=true` または未設定: `GROQ_API_KEY`の存在で自動判定
@@ -154,7 +154,11 @@
    - `GROQ_API_KEY`: Groq APIのキー
 3. デプロイを実行
 
-## 🤖 チャットボット機能
+## 🤖 チャットボット機能 ※現在この機能は工事中です
+
+<details>
+
+<summary>工事中のセクション</summary>
 
 画面左下のチャットボタンをクリックすると、AIアシスタントが利用できます：
 
@@ -181,6 +185,7 @@ pnpm index-videos
 # データの検証とクリーンアップ
 pnpm validate-index
 ```
+</details>
 
 ## 📊 データ更新について
 
