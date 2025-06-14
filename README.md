@@ -1,6 +1,6 @@
 # YuNi Stellar Chart
 
-Vsinger YuNiの動画をランキング表示するNext.jsアプリケーションです。
+**Vsinger YuNiの動画分析ツール** - YouTube動画の詳細な分析とランキング表示を行うNext.jsアプリケーションです。
 
 ## 🌟 機能
 
@@ -11,6 +11,7 @@ Vsinger YuNiの動画をランキング表示するNext.jsアプリケーショ�
 - **ネオンテーマUI**: 音楽テイストのネオンカラーデザイン
 - **背景アニメーション**: Canvas描画による動的な背景エフェクト
 - **詳細情報表示**: 動画の詳細情報をダイアログで表示
+- **SNSカード対応**: Twitter、Facebook、LINEなどでの適切なリンクプレビュー表示
 - **AIチャットボット**: Groq APIを使用した動画検索・質問応答機能 ※現在この機能は工事中です
 
 ## 🛠️ 技術スタック
@@ -24,6 +25,7 @@ Vsinger YuNiの動画をランキング表示するNext.jsアプリケーショ�
 - **フォーム**: React Hook Form + Zod
 - **API**: YouTube Data API v3, Groq API
 - **AI**: Groq SDK (Llama 3.1 70B)
+- **SEO**: Next.js Metadata API（Open Graph、Twitter Cards対応）
 
 ## ⚡ パフォーマンス最適化
 
@@ -84,7 +86,7 @@ Vsinger YuNiの動画をランキング表示するNext.jsアプリケーショ�
    ADMIN_API_KEY=your_admin_api_key_here
    ```
 
-   ### チャットボット機能の制御
+   ### チャットボット機能の制御 ※現在この機能は工事中です
    
    - `ENABLE_CHATBOT=false`: チャットボット機能を完全に無効化
    - `ENABLE_CHATBOT=true` または未設定: `GROQ_API_KEY`の存在で自動判定
@@ -104,10 +106,10 @@ Vsinger YuNiの動画をランキング表示するNext.jsアプリケーショ�
 │   ├── api/chat/          # チャットボットAPI
 │   ├── actions.ts         # Server Actions
 │   ├── globals.css        # グローバルスタイル
-│   ├── layout.tsx         # ルートレイアウト
+│   ├── layout.tsx         # ルートレイアウト（メタデータ設定含む）
 │   ├── loading.tsx        # ローディングコンポーネント
 │   ├── not-found.tsx      # 404ページ
-│   └── page.tsx           # メインページ
+│   └── page.tsx           # メインページ（動的メタデータ生成）
 ├── components/            # Reactコンポーネント
 │   ├── ui/               # 再利用可能なUIコンポーネント
 │   ├── backgrounds/      # 背景アニメーションコンポーネント
@@ -126,6 +128,9 @@ Vsinger YuNiの動画をランキング表示するNext.jsアプリケーショ�
 ├── hooks/                # カスタムフック
 ├── styles/               # スタイルファイル
 └── public/               # 静的ファイル
+    ├── og-image.png      # SNSカード用OGイメージ
+    ├── favicon.ico       # ファビコン
+    └── ...               # その他の静的ファイル
 ```
 
 ## 🔧 利用可能なスクリプト
@@ -149,7 +154,11 @@ Vsinger YuNiの動画をランキング表示するNext.jsアプリケーショ�
    - `GROQ_API_KEY`: Groq APIのキー
 3. デプロイを実行
 
-## 🤖 チャットボット機能
+## 🤖 チャットボット機能 ※現在この機能は工事中です
+
+<details>
+
+<summary>工事中のセクション</summary>
 
 画面左下のチャットボタンをクリックすると、AIアシスタントが利用できます：
 
@@ -176,6 +185,7 @@ pnpm index-videos
 # データの検証とクリーンアップ
 pnpm validate-index
 ```
+</details>
 
 ## 📊 データ更新について
 
@@ -207,3 +217,16 @@ pnpm validate-index
 - **デスクトップ**: Chrome/Firefox/Safari最新版
 - **モバイル**: iOS Safari 14+、Android Chrome 90+
 - **CPU**: 4コア以上推奨（2コアでも動作可能）
+
+## 📈 今後の予定
+
+- [ ] パフォーマンスの向上
+- [ ] チャットボット機能の完全実装
+- [ ] 動画分析機能の拡張
+- [ ] パフォーマンス指標の可視化
+- [ ] ユーザー設定の永続化
+- [ ] PWA対応
+
+## 📄 ライセンス
+
+このプロジェクトはMITライセンスの下で公開されています。
