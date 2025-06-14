@@ -69,6 +69,16 @@ export const translations: Translations = {
     subscribers: "チャンネル登録者数",
     totalViews: "総再生回数",
     totalVideos: "総動画数",
+    // ソート機能関連
+    sortBy: "並び替え",
+    sortByViewCount: "再生回数",
+    sortByLikeCount: "いいね数",
+    sortByCommentCount: "コメント数",
+    sortByPublishedAt: "投稿日",
+    sortOrderAsc: "昇順",
+    sortOrderDesc: "降順",
+    defaultSort: "デフォルト",
+    resetSort: "ソートをリセット",
   },
   en: {
     siteDescription: "Ranking YuNi's video performances by popularity, engagement, and views",
@@ -124,6 +134,16 @@ export const translations: Translations = {
     subscribers: "Subscribers",
     totalViews: "Total Views",
     totalVideos: "Total Videos",
+    // ソート機能関連
+    sortBy: "Sort by",
+    sortByViewCount: "View Count",
+    sortByLikeCount: "Like Count",
+    sortByCommentCount: "Comment Count",
+    sortByPublishedAt: "Upload Date",
+    sortOrderAsc: "Ascending",
+    sortOrderDesc: "Descending",
+    defaultSort: "Default",
+    resetSort: "Reset Sort",
   },
   zh: {
     siteDescription: "按人气、互动和观看次数对YuNi的视频表现进行排名",
@@ -179,6 +199,16 @@ export const translations: Translations = {
     subscribers: "订阅者",
     totalViews: "总观看量",
     totalVideos: "视频总数",
+    // ソート機能関連
+    sortBy: "排序方式",
+    sortByViewCount: "观看次数",
+    sortByLikeCount: "点赞数",
+    sortByCommentCount: "评论数",
+    sortByPublishedAt: "上传日期",
+    sortOrderAsc: "升序",
+    sortOrderDesc: "降序",
+    defaultSort: "默认",
+    resetSort: "重置排序",
   },
   ko: {
     siteDescription: "인기도, 참여도, 조회수별 YuNi의 비디오 퍼포먼스 순위",
@@ -234,6 +264,16 @@ export const translations: Translations = {
     subscribers: "구독자",
     totalViews: "총 조회수",
     totalVideos: "총 동영상 수",
+    // ソート機能関連
+    sortBy: "정렬 기준",
+    sortByViewCount: "조회수",
+    sortByLikeCount: "좋아요 수",
+    sortByCommentCount: "댓글 수",
+    sortByPublishedAt: "업로드 날짜",
+    sortOrderAsc: "오름차순",
+    sortOrderDesc: "내림차순",
+    defaultSort: "기본값",
+    resetSort: "정렬 초기화",
   },
 }
 

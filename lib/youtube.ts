@@ -56,20 +56,30 @@ import { debugLog, debugError } from '@/lib/utils'
 
 /**
  * YouTube動画がShort動画か通常動画かを判定する
+ * 新しい仕様: shortsURLにアクセスしてリダイレクトされない場合はショート動画
  * @param {string} videoId - 判定対象の動画ID
  * @returns {Promise<boolean>} - Short動画の場合はtrue、それ以外はfalse
  */
 async function isYouTubeShort(videoId: string): Promise<boolean> {
   try {
-    // YouTube Shortsの場合、通常のwatch URLにアクセスするとshortsページにリダイレクトされる
-    const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+    // ショート動画の場合、shortsページにアクセスしてもリダイレクトされない
+    // 通常動画の場合、shortsページにアクセスすると通常のwatchページにリダイレクトされる
+    const response = await fetch(`https://www.youtube.com/shorts/${videoId}`, {
       method: "HEAD",
       redirect: "manual", // リダイレクトを手動で処理
     })
 
     // リダイレクト先のURLを確認
     const location = response.headers.get("location")
-    if (location && location.includes("/shorts/")) {
+    
+    // リダイレクトされた場合（通常動画）
+    if (location && (location.includes("/watch?v=") || location.includes("/watch/"))) {
+      return false
+    }
+
+    // リダイレクトされなかった場合（ショート動画）
+    // ステータスコードが200番台の場合はショート動画として扱う
+    if (response.status >= 200 && response.status < 400) {
       return true
     }
 
