@@ -84,6 +84,9 @@
    
    # 管理機能（オプション）
    ADMIN_API_KEY=your_admin_api_key_here
+   
+   # UI表示制御（オプション）
+   SHOW_HERO_SECTION=true                 # ヒーローセクションの表示制御（デフォルト: true）
    ```
 
    ### チャットボット機能の制御 ※現在この機能は工事中です
@@ -91,6 +94,11 @@
    - `ENABLE_CHATBOT=false`: チャットボット機能を完全に無効化
    - `ENABLE_CHATBOT=true` または未設定: `GROQ_API_KEY`の存在で自動判定
    - `GROQ_API_KEY`未設定: チャットボタンが非表示になり、API呼び出しでエラーメッセージ
+
+   ### ヒーローセクションの制御
+   
+   - `SHOW_HERO_SECTION=true` または未設定: ヒーローセクションを表示（デフォルト）
+   - `SHOW_HERO_SECTION=false`: ヒーローセクションを非表示にし、メインコンテンツを上部に配置
 
 4. **開発サーバーの起動**
    ```bash
@@ -120,6 +128,8 @@
 │   │   ├── audio-visualizer.tsx  # スペクトラムバー
 │   │   └── vinyl-record.tsx      # レコード回転アニメーション
 │   ├── chatbot/          # チャットボット関連コンポーネント
+│   ├── hero/             # ヒーローセクションコンポーネント
+│   │   └── music-hero.tsx        # メインヒーローセクション
 │   ├── video-ranking.tsx # 動画ランキング表示
 │   ├── video-detail-dialog.tsx # 動画詳細ダイアログ
 │   ├── refresh-button.tsx # 更新ボタン
