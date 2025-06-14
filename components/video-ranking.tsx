@@ -220,16 +220,15 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     return sorted.slice(0, limitCount)
   }, [videos, searchQuery, yearFilter, excludeShorts, limitCount, sortField, sortOrder])
 
-  // アクティブなフィルター数を更新（ソート条件も含める）
+  // アクティブなフィルター数を更新（ソート条件は除外）
   useEffect(() => {
     let count = 0
     if (yearFilter !== "all") count++
     if (limitCount !== 100) count++
     if (searchQuery) count++
     if (excludeShorts) count++
-    if (sortField !== "default") count++
     setActiveFilters(count)
-  }, [yearFilter, limitCount, searchQuery, excludeShorts, sortField])
+  }, [yearFilter, limitCount, searchQuery, excludeShorts])
 
   const handleVideoClick = (video: YouTubeVideo) => {
     // クリックアニメーションのためにIDを設定
@@ -251,50 +250,63 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     setLimitCount(100)
     setSearchQuery("")
     setExcludeShorts(false)
-    setSortField("default")
-    setSortOrder("desc")
+    // ソート条件はリセットしない
     // モバイルの場合はシートを閉じる
     if (isMobile) {
       setFilterSheetOpen(false)
     }
   }
 
+  // 独立したソートコントロール
+  const SortControls = () => (
+    <div className="flex items-center gap-2">
+      <Select value={sortField} onValueChange={(value: SortField) => setSortField(value)}>
+        <SelectTrigger className={isMobile ? "w-full" : "w-48"}>
+          <SelectValue placeholder={t("sortBy")} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="default">{t("defaultSort")}</SelectItem>
+          <SelectItem value="viewCount">{t("sortByViewCount")}</SelectItem>
+          <SelectItem value="likeCount">{t("sortByLikeCount")}</SelectItem>
+          <SelectItem value="commentCount">{t("sortByCommentCount")}</SelectItem>
+          <SelectItem value="publishedAt">{t("sortByPublishedAt")}</SelectItem>
+        </SelectContent>
+      </Select>
+      {sortField !== "default" && (
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            className="px-3"
+            title={sortOrder === "asc" ? t("sortOrderDesc") : t("sortOrderAsc")}
+          >
+            {sortOrder === "asc" ? (
+              <ArrowUp className="h-4 w-4" />
+            ) : (
+              <ArrowDown className="h-4 w-4" />
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSortField("default")
+              setSortOrder("desc")
+            }}
+            className="px-2"
+            title={t("resetSort")}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </>
+      )}
+    </div>
+  )
+
   // フィルター設定UI
   const FilterControls = () => (
     <div className="space-y-4">
-      {/* ソート設定 */}
-      <div className="space-y-2">
-        <h4 className="text-sm font-medium">{t("sortBy")}</h4>
-        <div className="flex gap-2">
-          <Select value={sortField} onValueChange={(value: SortField) => setSortField(value)}>
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder={t("sortBy")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">{t("defaultSort")}</SelectItem>
-              <SelectItem value="viewCount">{t("sortByViewCount")}</SelectItem>
-              <SelectItem value="likeCount">{t("sortByLikeCount")}</SelectItem>
-              <SelectItem value="commentCount">{t("sortByCommentCount")}</SelectItem>
-              <SelectItem value="publishedAt">{t("sortByPublishedAt")}</SelectItem>
-            </SelectContent>
-          </Select>
-          {sortField !== "default" && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-              className="px-3"
-            >
-              {sortOrder === "asc" ? (
-                <ArrowUp className="h-4 w-4" />
-              ) : (
-                <ArrowDown className="h-4 w-4" />
-              )}
-            </Button>
-          )}
-        </div>
-      </div>
-
       <div className="space-y-2">
         <h4 className="text-sm font-medium">{t("publishYear")}</h4>
         <Select value={yearFilter} onValueChange={setYearFilter}>
@@ -490,20 +502,26 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                   </Button>
                 </Badge>
               )}
-              {/* ソート条件の表示 */}
-              {sortField !== "default" && (
-                <Badge variant="secondary" className="gap-1 flex items-center">
-                  {t(`sortBy${sortField.charAt(0).toUpperCase() + sortField.slice(1)}`)}
-                  {sortOrder === "asc" ? " ↑" : " ↓"}
-                  <Button variant="ghost" size="icon" className="h-4 w-4 p-0 ml-1" onClick={() => setSortField("default")}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              )}
             </div>
           )}
         </div>
+        
+        {/* 右側にソートコントロールを配置 */}
+        {!isMobile && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">{t("sortBy")}:</span>
+            <SortControls />
+          </div>
+        )}
       </div>
+
+      {/* モバイル用のソートコントロール */}
+      {isMobile && (
+        <div className="flex flex-col gap-2">
+          <span className="text-sm text-muted-foreground">{t("sortBy")}:</span>
+          <SortControls />
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">

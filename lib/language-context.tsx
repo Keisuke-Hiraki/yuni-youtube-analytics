@@ -78,6 +78,7 @@ export const translations: Translations = {
     sortOrderAsc: "昇順",
     sortOrderDesc: "降順",
     defaultSort: "デフォルト",
+    resetSort: "ソートをリセット",
   },
   en: {
     siteDescription: "Ranking YuNi's video performances by popularity, engagement, and views",
@@ -142,6 +143,7 @@ export const translations: Translations = {
     sortOrderAsc: "Ascending",
     sortOrderDesc: "Descending",
     defaultSort: "Default",
+    resetSort: "Reset Sort",
   },
   zh: {
     siteDescription: "按人气、互动和观看次数对YuNi的视频表现进行排名",
@@ -206,6 +208,7 @@ export const translations: Translations = {
     sortOrderAsc: "升序",
     sortOrderDesc: "降序",
     defaultSort: "默认",
+    resetSort: "重置排序",
   },
   ko: {
     siteDescription: "인기도, 참여도, 조회수별 YuNi의 비디오 퍼포먼스 순위",
@@ -270,6 +273,7 @@ export const translations: Translations = {
     sortOrderAsc: "오름차순",
     sortOrderDesc: "내림차순",
     defaultSort: "기본값",
+    resetSort: "정렬 초기화",
   },
 }
 
