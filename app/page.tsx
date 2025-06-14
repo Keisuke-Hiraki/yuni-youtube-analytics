@@ -69,7 +69,7 @@ export default async function Home() {
           </div>
         ) : (
           <Suspense fallback={<Loading />}>
-            <VideoRanking initialVideos={videos} />
+            <VideoRanking initialVideos={videos || []} />
           </Suspense>
         )}
       </main>

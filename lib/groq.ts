@@ -189,10 +189,21 @@ async function prepareVideoDataWithRAG(videos: YouTubeVideo[], message: string) 
 
 // フォールバック用の従来の方法
 function prepareVideoDataFallback(videos: YouTubeVideo[], message: string, queryType: string) {
+  // videosが配列でない場合の安全性チェック
+  if (!videos || !Array.isArray(videos) || videos.length === 0) {
+    return {
+      data: '動画データが利用できません。',
+      count: 0,
+      type: queryType,
+      source: 'fallback'
+    }
+  }
+
   switch (queryType) {
     case 'statistical':
       // 統計的質問：データを年ごとにグループ化して要約
       const videosByYear = videos.reduce((acc, video) => {
+        if (!video || !video.publishedAt) return acc
         const year = video.publishedAt.substring(0, 4)
         if (!acc[year]) acc[year] = []
         acc[year].push(video)
@@ -204,11 +215,14 @@ function prepareVideoDataFallback(videos: YouTubeVideo[], message: string, query
         const yearVideos = videosByYear[year]
         // 各年のトップ10のみ含める
         const topVideos = yearVideos
+          .filter(video => video && video.viewCount !== undefined)
           .sort((a, b) => b.viewCount - a.viewCount)
           .slice(0, 10)
         
-        statsData += `\n${year}年の動画:\n`
-        statsData += topVideos.map(formatVideoForStats).join('\n')
+        if (topVideos.length > 0) {
+          statsData += `\n${year}年の動画:\n`
+          statsData += topVideos.map(formatVideoForStats).join('\n')
+        }
         statsData += '\n'
       })
       
@@ -223,12 +237,13 @@ function prepareVideoDataFallback(videos: YouTubeVideo[], message: string, query
       // 検索質問：キーワードマッチング
       const keywords = message.toLowerCase().split(/\s+/).filter(word => word.length > 1)
       const relevantVideos = videos.filter(video => {
-        const searchText = `${video.title} ${video.description}`.toLowerCase()
+        if (!video || !video.title) return false
+        const searchText = `${video.title} ${video.description || ''}`.toLowerCase()
         return keywords.some(keyword => searchText.includes(keyword))
       }).slice(0, 30)
       
       return {
-        data: relevantVideos.map(formatVideoCompact).join('\n'),
+        data: relevantVideos.length > 0 ? relevantVideos.map(formatVideoCompact).join('\n') : '検索条件に一致する動画が見つかりませんでした。',
         count: relevantVideos.length,
         type: 'search',
         source: 'fallback'
@@ -237,11 +252,12 @@ function prepareVideoDataFallback(videos: YouTubeVideo[], message: string, query
     case 'recent':
       // 最新情報：日付順で最新50件
       const recentVideos = videos
+        .filter(video => video && video.publishedAt)
         .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
         .slice(0, 50)
       
       return {
-        data: recentVideos.map(formatVideoCompact).join('\n'),
+        data: recentVideos.length > 0 ? recentVideos.map(formatVideoCompact).join('\n') : '最新の動画情報が見つかりませんでした。',
         count: recentVideos.length,
         type: 'recent',
         source: 'fallback'
@@ -250,11 +266,12 @@ function prepareVideoDataFallback(videos: YouTubeVideo[], message: string, query
     default:
       // 一般的質問：人気順で上位30件
       const popularVideos = videos
+        .filter(video => video && video.viewCount !== undefined)
         .sort((a, b) => b.viewCount - a.viewCount)
         .slice(0, 30)
       
       return {
-        data: popularVideos.map(formatVideoCompact).join('\n'),
+        data: popularVideos.length > 0 ? popularVideos.map(formatVideoCompact).join('\n') : '人気動画情報が見つかりませんでした。',
         count: popularVideos.length,
         type: 'general',
         source: 'fallback'

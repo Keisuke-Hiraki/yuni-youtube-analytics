@@ -103,8 +103,17 @@ export async function getChannelInfo(): Promise<ChannelInfo | null> {
 // 動画の総再生回数を計算する代替関数
 async function calculateTotalViewCount(videos: YouTubeVideo[]): Promise<number> {
   try {
+    // videosが配列でない場合の安全性チェック
+    if (!videos || !Array.isArray(videos) || videos.length === 0) {
+      debugLog("動画データが空のため、総再生回数は0を返します")
+      return 0
+    }
+    
     // 全動画の再生回数を合計
-    const totalViews = videos.reduce((total, video) => total + video.viewCount, 0)
+    const totalViews = videos.reduce((total, video) => {
+      if (!video || typeof video.viewCount !== 'number') return total
+      return total + video.viewCount
+    }, 0)
     debugLog(`計算された総再生回数: ${totalViews} (${videos.length}件の動画から)`)
     return totalViews
   } catch (error) {
