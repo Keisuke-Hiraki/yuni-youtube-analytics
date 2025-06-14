@@ -16,13 +16,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
   // 動的なメタデータを生成
   return {
-    title: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
-    description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
+    title: "YuNi Stellar Chart - Vsinger YuNiの動画分析ツール",
+    description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、動画ランキング。${
       channelInfo ? `チャンネル登録者数: ${channelInfo.subscriberCount.toLocaleString()}人` : ""
     }`,
     openGraph: {
-      title: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
-      description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
+      title: "YuNi Stellar Chart - Vsinger YuNiの動画分析ツール",
+      description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、動画ランキング。${
         channelInfo ? `チャンネル登録者数: ${channelInfo.subscriberCount.toLocaleString()}人` : ""
       }`,
       url: "https://yuni-stellar-chart.vercel.app",
@@ -32,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
           url: "https://yuni-stellar-chart.vercel.app/og-image.png",
           width: 1200,
           height: 1200,
-          alt: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
+          alt: "YuNi Stellar Chart - Vsinger YuNiの動画分析ツール",
         },
       ],
       locale: "ja_JP",
@@ -40,8 +40,8 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     twitter: {
       card: "summary_large_image",
-      title: "YuNi Stellar Chart - 音楽の世界を彩るネオンランキング",
-      description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、ネオンに輝く動画ランキング。${
+      title: "YuNi Stellar Chart - Vsinger YuNiの動画分析ツール",
+      description: `Vsinger YuNiの動画をランキング。音楽の世界を彩る、動画ランキング。${
         channelInfo ? `チャンネル登録者数: ${channelInfo.subscriberCount.toLocaleString()}人` : ""
       }`,
       images: ["https://yuni-stellar-chart.vercel.app/og-image.png"],
