@@ -157,8 +157,12 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
     const chunkSize = 50 // YouTube APIの制限
 
     for (let i = 0; i < allPlaylistItems.length; i += chunkSize) {
-      const chunk = allPlaylistItems.slice(i, i + chunkSize).map((item) => item.snippet.resourceId.videoId)
-      videoIdChunks.push(chunk)
+      const chunk = allPlaylistItems.slice(i, i + chunkSize)
+        .filter(item => item && item.snippet && item.snippet.resourceId && item.snippet.resourceId.videoId)
+        .map((item) => item.snippet.resourceId.videoId)
+      if (chunk.length > 0) {
+        videoIdChunks.push(chunk)
+      }
     }
 
     // 各チャンクごとに動画の詳細情報を取得
@@ -181,7 +185,9 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
         // 全ての動画IDに対してショート動画かどうかを一括チェック
         const shortsResults = await checkMultipleShorts(videoIds)
 
-        const videos = videosData.items.map((item: any) => {
+        const videos = videosData.items
+          .filter((item: any) => item && item.id && item.snippet && item.statistics)
+          .map((item: any) => {
           // タイトルに基づくショート判定（バックアップ方法）
           const titleHasShorts =
             item.snippet.title.toLowerCase().includes("#shorts") || item.snippet.title.toLowerCase().includes("#short")

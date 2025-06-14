@@ -5,8 +5,6 @@ import { useState, useMemo, useEffect, useRef } from "react"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import {
-  ChevronDown,
-  ChevronUp,
   Eye,
   ThumbsUp,
   MessageSquare,
@@ -38,18 +36,13 @@ import { NeonText } from "@/components/neon/neon-text"
 import { useLanguage } from "@/lib/language-context"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
-type SortField = "viewCount" | "likeCount" | "commentCount" | "publishedAt"
-type SortOrder = "asc" | "desc"
-
 interface VideoRankingProps {
   initialVideos: YouTubeVideo[]
 }
 
 export default function VideoRanking({ initialVideos }: VideoRankingProps) {
   const { t, language } = useLanguage()
-  const [videos] = useState<YouTubeVideo[]>(initialVideos)
-  const [sortField, setSortField] = useState<SortField>("viewCount")
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc")
+  const [videos] = useState<YouTubeVideo[]>(initialVideos || [])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null)
   const [yearFilter, setYearFilter] = useState<string>("all")
@@ -121,54 +114,57 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
 
   // 利用可能な年のリストを取得
   const availableYears = useMemo(() => {
+    if (!videos || !Array.isArray(videos) || videos.length === 0) {
+      return []
+    }
     const years = new Set<string>()
     videos.forEach((video) => {
-      const year = new Date(video.publishedAt).getFullYear().toString()
-      years.add(year)
+      if (video && video.publishedAt) {
+        try {
+          const year = new Date(video.publishedAt).getFullYear().toString()
+          years.add(year)
+        } catch (error) {
+          console.error('Invalid date format:', video.publishedAt, error)
+        }
+      }
     })
     return Array.from(years).sort((a, b) => Number.parseInt(b) - Number.parseInt(a)) // 降順でソート
   }, [videos])
 
-  // フィルタリングされた動画
+  // フィルタリングされた動画（表示件数制限も適用）
   const filteredVideos = useMemo(() => {
+    if (!videos || !Array.isArray(videos)) {
+      return []
+    }
     let filtered = videos
 
     // タイトル検索
     if (searchQuery) {
-      filtered = filtered.filter((video) => video.title.toLowerCase().includes(searchQuery.toLowerCase()))
+      filtered = filtered.filter((video) => video && video.title && video.title.toLowerCase().includes(searchQuery.toLowerCase()))
     }
 
     // 年フィルター
     if (yearFilter !== "all") {
       filtered = filtered.filter((video) => {
-        const videoYear = new Date(video.publishedAt).getFullYear().toString()
-        return videoYear === yearFilter
+        if (!video || !video.publishedAt) return false
+        try {
+          const videoYear = new Date(video.publishedAt).getFullYear().toString()
+          return videoYear === yearFilter
+        } catch (error) {
+          console.error('Invalid date format during filtering:', video.publishedAt, error)
+          return false
+        }
       })
     }
 
     // ショート動画除外フィルター
     if (excludeShorts) {
-      filtered = filtered.filter((video) => !video.isShort)
+      filtered = filtered.filter((video) => video && !video.isShort)
     }
 
-    return filtered
-  }, [videos, searchQuery, yearFilter, excludeShorts])
-
-  // ソートされた動画
-  const sortedVideos = useMemo(() => {
-    const sorted = [...filteredVideos].sort((a, b) => {
-      if (sortField === "publishedAt") {
-        const dateA = new Date(a[sortField]).getTime()
-        const dateB = new Date(b[sortField]).getTime()
-        return sortOrder === "asc" ? dateA - dateB : dateB - dateA
-      }
-
-      return sortOrder === "asc" ? a[sortField] - b[sortField] : b[sortField] - a[sortField]
-    })
-
     // 表示件数制限
-    return sorted.slice(0, limitCount)
-  }, [filteredVideos, sortField, sortOrder, limitCount])
+    return filtered.slice(0, limitCount)
+  }, [videos, searchQuery, yearFilter, excludeShorts, limitCount])
 
   // アクティブなフィルター数を更新
   useEffect(() => {
@@ -179,15 +175,6 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     if (excludeShorts) count++
     setActiveFilters(count)
   }, [yearFilter, limitCount, searchQuery, excludeShorts])
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-    } else {
-      setSortField(field)
-      setSortOrder("desc")
-    }
-  }
 
   const handleVideoClick = (video: YouTubeVideo) => {
     // クリックアニメーションのためにIDを設定
@@ -226,12 +213,12 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("allYears")}</SelectItem>
-            {availableYears.map((year) => (
+            {availableYears && Array.isArray(availableYears) ? availableYears.map((year) => (
               <SelectItem key={year} value={year}>
                 {year}
                 {t("year")}
               </SelectItem>
-            ))}
+            )) : null}
           </SelectContent>
         </Select>
       </div>
@@ -416,37 +403,32 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
             </div>
           )}
         </div>
-
-        <div className={`flex items-center gap-2 ${isMobile ? 'w-full' : 'w-full sm:w-auto'}`}>
-          <span className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground whitespace-nowrap`}>{t("sortBy")}</span>
-          <Select value={sortField} onValueChange={(value) => handleSort(value as SortField)}>
-            <SelectTrigger className={isMobile ? "w-full" : "w-full sm:w-[180px]"}>
-              <SelectValue placeholder={t("sortBy")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="viewCount">{t("viewCount")}</SelectItem>
-              <SelectItem value="likeCount">{t("likeCount")}</SelectItem>
-              <SelectItem value="commentCount">{t("commentCount")}</SelectItem>
-              <SelectItem value="publishedAt">{t("publishedAt")}</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button
-            variant="ghost"
-            size={isMobile ? "sm" : "icon"}
-            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-            aria-label={sortOrder === "asc" ? "昇順" : "降順"}
-            className="active:scale-90 transition-transform"
-          >
-            {sortOrder === "asc" ? <ChevronUp className={isMobile ? "h-4 w-4" : ""} /> : <ChevronDown className={isMobile ? "h-4 w-4" : ""} />}
-          </Button>
-        </div>
       </div>
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {filteredVideos.length}
-          {t("displayingVideos")} {Math.min(sortedVideos.length, limitCount)}
+          {videos && Array.isArray(videos) ? videos.filter(video => {
+            if (!video) return false
+            // フィルタリング条件を再適用（表示件数制限前の数を取得）
+            let filtered = true
+            if (searchQuery) {
+              filtered = filtered && !!(video.title && video.title.toLowerCase().includes(searchQuery.toLowerCase()))
+            }
+            if (yearFilter !== "all") {
+              if (!video.publishedAt) return false
+              try {
+                const videoYear = new Date(video.publishedAt).getFullYear().toString()
+                filtered = filtered && videoYear === yearFilter
+              } catch (error) {
+                return false
+              }
+            }
+            if (excludeShorts) {
+              filtered = filtered && !video.isShort
+            }
+            return filtered
+          }).length : 0}
+          {t("displayingVideos")} {filteredVideos && filteredVideos.length ? Math.min(filteredVideos.length, limitCount) : 0}
           {t("displaying")}
         </p>
       </div>
@@ -477,19 +459,21 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           <TabsContent value="grid" className="w-full">
             {/* ネオンカードを使用したグリッドレイアウト（モバイル最適化） */}
             <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8'}`}>
-              {sortedVideos.map((video, index) => {
+              {filteredVideos && Array.isArray(filteredVideos) ? filteredVideos.map((video, index) => {
+                if (!video || !video.id) return null
+                
                 // YouTubeVideoをNeonVideoCardが期待する形式に変換
                 const neonVideo = {
                   id: video.id,
-                  title: video.title,
+                  title: video.title || '',
                   thumbnail: video.thumbnailUrl || "/placeholder.svg?height=180&width=320",
-                  viewCount: video.viewCount,
-                  likeCount: video.likeCount,
-                  commentCount: video.commentCount,
-                  popularityScore: Math.min(video.viewCount / 10000000, 1), // 1000万再生を最大値として正規化
-                  publishedAt: video.publishedAt,
-                  duration: video.duration,
-                  isShort: video.isShort
+                  viewCount: video.viewCount || 0,
+                  likeCount: video.likeCount || 0,
+                  commentCount: video.commentCount || 0,
+                  popularityScore: Math.min((video.viewCount || 0) / 10000000, 1), // 1000万再生を最大値として正規化
+                  publishedAt: video.publishedAt || '',
+                  duration: video.duration || '',
+                  isShort: video.isShort || false
                 }
 
                 return (
@@ -500,7 +484,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                     onClick={() => handleVideoClick(video)}
                   />
                 )
-              })}
+              }).filter(Boolean) : null}
             </div>
           </TabsContent>
 
@@ -509,8 +493,10 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
               ref={listContainerRef}
               className={`space-y-2 sm:space-y-3 md:space-y-4 w-full ${isMobile ? 'px-1' : 'px-2'}`}
             >
-              {sortedVideos.map((video, index) => {
-                const viewCountTag = getViewCountTag(video.viewCount)
+              {filteredVideos && Array.isArray(filteredVideos) ? filteredVideos.map((video, index) => {
+                if (!video || !video.id) return null
+                
+                const viewCountTag = getViewCountTag(video.viewCount || 0)
                 const neonColors = ['pink', 'cyan', 'green', 'purple', 'orange'] as const
                 const color = neonColors[index % neonColors.length]
                 const isHovered = hoveredItemId === video.id
@@ -702,7 +688,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                     </div>
                   </motion.div>
                 )
-              })}
+              }).filter(Boolean) : null}
             </div>
           </TabsContent>
         </Tabs>
