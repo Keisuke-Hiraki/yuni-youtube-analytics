@@ -1,11 +1,9 @@
 "use server"
 
 import { getChannelVideos, type YouTubeVideo } from "@/lib/youtube"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import { debugLog, debugError } from '@/lib/utils'
-
-// YuNiさんのチャンネルID
-const CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID!
+import { checkRateLimit } from '@/lib/rate-limit'
 
 // チャンネル情報の型定義
 export interface ChannelInfo {
@@ -18,24 +16,27 @@ export interface ChannelInfo {
   thumbnailUrl: string
 }
 
-// メモリキャッシュ用の変数
-let cachedData: {
-  videos: YouTubeVideo[]
-  error?: string
-  totalCount: number
-  lastUpdated: string
-  channelInfo: ChannelInfo | null
-  cacheTimestamp: number
-} | null = null
-
-const CACHE_DURATION = 60 * 60 * 1000 // 1時間（ミリ秒）
+// Reads a required environment variable lazily (inside a function body, not at
+// module top level). Throwing at module scope would crash `next build` /
+// `generateMetadata` whenever the env var is absent, so validation happens on
+// first use instead.
+function requireEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}. Please set it in your environment (e.g. .env.local).`)
+  }
+  return value
+}
 
 // チャンネル情報を取得する関数
 export async function getChannelInfo(): Promise<ChannelInfo | null> {
   try {
+    const channelId = requireEnv("YOUTUBE_CHANNEL_ID")
+    const apiKey = requireEnv("YOUTUBE_API_KEY")
+
     // 明示的にstatisticsパートを指定して、必要なデータを確実に取得
     const response = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id=${CHANNEL_ID}&key=${process.env.YOUTUBE_API_KEY}`,
+      `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id=${channelId}&key=${apiKey}`,
     )
 
     if (!response.ok) {
@@ -118,7 +119,83 @@ async function calculateTotalViewCount(videos: YouTubeVideo[]): Promise<number> 
   }
 }
 
-// キャッシュ付きでデータを取得する新しい関数
+// 動画・チャンネル情報を取得する内部関数（エラー時は throw する）
+//
+// unstable_cache does not access cookies/headers, and this function does not
+// use them either, so it is safe to wrap directly.
+//
+// IMPORTANT: this function throws on failure instead of returning an `error`
+// field, so that unstable_cache never caches a failed fetch. If a failure
+// result were returned (not thrown), unstable_cache would treat it as a
+// successful value and lock in the error message for the full revalidate
+// window (1 hour).
+async function fetchYuNiVideosRaw(): Promise<{
+  videos: YouTubeVideo[]
+  totalCount: number
+  lastUpdated: string
+  channelInfo: ChannelInfo | null
+}> {
+  const channelId = requireEnv("YOUTUBE_CHANNEL_ID")
+
+  // 動画データを取得
+  const videos = await getChannelVideos(channelId, 500)
+
+  // チャンネル情報を取得
+  let channelInfo = await getChannelInfo()
+
+  // チャンネル情報が取得できなかった場合のログ
+  if (!channelInfo) {
+    debugError("チャンネル情報の取得に失敗しました")
+    // 最小限のチャンネル情報を作成
+    channelInfo = {
+      id: channelId,
+      title: "YuNi Channel",
+      description: "",
+      subscriberCount: 0,
+      viewCount: 0,
+      videoCount: videos.length,
+      thumbnailUrl: "",
+    }
+  }
+
+  // APIから取得した総再生回数が0の場合、代替計算を使用
+  if (channelInfo.viewCount === 0) {
+    debugLog("APIから取得した総再生回数が0のため、代替計算を使用します")
+    const calculatedViewCount = await calculateTotalViewCount(videos)
+
+    // 計算した値で更新
+    channelInfo = {
+      ...channelInfo,
+      viewCount: calculatedViewCount,
+    }
+  }
+
+  debugLog("最終的なチャンネル情報:", {
+    title: channelInfo.title,
+    subscriberCount: channelInfo.subscriberCount,
+    viewCount: channelInfo.viewCount,
+    videoCount: channelInfo.videoCount,
+  })
+
+  // 最終更新日時を記録
+  const lastUpdated = new Date().toISOString()
+
+  return {
+    videos,
+    totalCount: videos.length,
+    lastUpdated,
+    channelInfo,
+  }
+}
+
+// fetchYuNiVideosRaw を unstable_cache でラップしたもの。
+// revalidate: 1時間ごとに再取得。tags: refreshVideoData から revalidateTag で明示的に無効化可能。
+const getCachedVideos = unstable_cache(fetchYuNiVideosRaw, ["yuni-videos"], {
+  revalidate: 3600,
+  tags: ["videos"],
+})
+
+// キャッシュ付きでデータを取得する関数（公開API・シグネチャは変更しない）
 export async function fetchYuNiVideosWithCache(): Promise<{
   videos: YouTubeVideo[]
   error?: string
@@ -126,38 +203,24 @@ export async function fetchYuNiVideosWithCache(): Promise<{
   lastUpdated: string
   channelInfo: ChannelInfo | null
 }> {
-  const now = Date.now()
-  
-  // キャッシュが存在し、有効期限内の場合はキャッシュを返す
-  if (cachedData && (now - cachedData.cacheTimestamp) < CACHE_DURATION) {
-    debugLog('キャッシュからデータを返します', {
-      cacheAge: Math.round((now - cachedData.cacheTimestamp) / 1000 / 60),
-      totalVideos: cachedData.totalCount
-    })
-    
+  try {
+    return await getCachedVideos()
+  } catch (error) {
+    // fetchYuNiVideosRaw throws on failure so that unstable_cache does not
+    // cache the error. The error is converted to the `error` field here,
+    // outside the cached function, on every call (not cached).
+    debugError("動画取得エラー:", error)
     return {
-      videos: cachedData.videos,
-      error: cachedData.error,
-      totalCount: cachedData.totalCount,
-      lastUpdated: cachedData.lastUpdated,
-      channelInfo: cachedData.channelInfo
+      videos: [],
+      error: "動画データの取得に失敗しました。しばらく経ってからもう一度お試しください。",
+      totalCount: 0,
+      lastUpdated: new Date().toISOString(),
+      channelInfo: null,
     }
   }
-
-  // キャッシュが無効または存在しない場合は新しいデータを取得
-  debugLog('新しいデータを取得します')
-  const freshData = await fetchYuNiVideos()
-  
-  // キャッシュを更新
-  cachedData = {
-    ...freshData,
-    cacheTimestamp: now
-  }
-  
-  return freshData
 }
 
-// キャッシュの有効期限を1時間に設定
+// 非キャッシュ版（API routeなど、常に最新データが必要な呼び出し元向け）
 export async function fetchYuNiVideos(): Promise<{
   videos: YouTubeVideo[]
   error?: string
@@ -166,55 +229,7 @@ export async function fetchYuNiVideos(): Promise<{
   channelInfo: ChannelInfo | null
 }> {
   try {
-    // 動画データを取得
-    const videos = await getChannelVideos(CHANNEL_ID, 500)
-
-    // チャンネル情報を取得
-    let channelInfo = await getChannelInfo()
-
-    // チャンネル情報が取得できなかった場合のログ
-    if (!channelInfo) {
-      debugError("チャンネル情報の取得に失敗しました")
-      // 最小限のチャンネル情報を作成
-      channelInfo = {
-        id: CHANNEL_ID,
-        title: "YuNi Channel",
-        description: "",
-        subscriberCount: 0,
-        viewCount: 0,
-        videoCount: videos.length,
-        thumbnailUrl: "",
-      }
-    }
-
-    // APIから取得した総再生回数が0の場合、代替計算を使用
-    if (channelInfo.viewCount === 0) {
-      debugLog("APIから取得した総再生回数が0のため、代替計算を使用します")
-      const calculatedViewCount = await calculateTotalViewCount(videos)
-
-      // 計算した値で更新
-      channelInfo = {
-        ...channelInfo,
-        viewCount: calculatedViewCount,
-      }
-    }
-
-    debugLog("最終的なチャンネル情報:", {
-      title: channelInfo.title,
-      subscriberCount: channelInfo.subscriberCount,
-      viewCount: channelInfo.viewCount,
-      videoCount: channelInfo.videoCount,
-    })
-
-    // 最終更新日時を記録
-    const lastUpdated = new Date().toISOString()
-
-    return {
-      videos,
-      totalCount: videos.length,
-      lastUpdated,
-      channelInfo,
-    }
+    return await fetchYuNiVideosRaw()
   } catch (error) {
     debugError("動画取得エラー:", error)
     return {
@@ -227,27 +242,31 @@ export async function fetchYuNiVideos(): Promise<{
   }
 }
 
-// キャッシュを強制的に更新するためのアクション（修正版）
+// キャッシュを強制的に更新するためのアクション
 export async function refreshVideoData(): Promise<{
   success: boolean
   message: string
 }> {
-  try {
-    // 意図的に少し遅延させて、プログレスバーの動きを見せる
-    await new Promise((resolve) => setTimeout(resolve, 500))
+  // Server Actions cannot reliably read the caller's IP, so a global key is
+  // used to throttle refresh requests across all callers.
+  const rateLimit = checkRateLimit("refresh-video-data", 3, 60_000)
+  if (!rateLimit.allowed) {
+    return {
+      success: false,
+      message: "更新は少し時間をおいてから再度お試しください",
+    }
+  }
 
-    // キャッシュをクリア
-    cachedData = null
-    debugLog('キャッシュをクリアしました')
+  try {
+    // "videos" タグの付いたキャッシュを無効化する
+    revalidateTag("videos")
+    debugLog("キャッシュタグ 'videos' を無効化しました")
 
     // 新しいデータを取得してキャッシュを更新
     await fetchYuNiVideosWithCache()
 
     // ルートパスのキャッシュを再検証
     revalidatePath("/")
-
-    // さらに少し遅延させて、プログレスバーの動きを見せる
-    await new Promise((resolve) => setTimeout(resolve, 1000))
 
     return {
       success: true,
