@@ -1,12 +1,14 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { memo, useState } from 'react'
+import type React from 'react'
 import { Card } from '../ui/card'
 import { NeonText } from '@/components/neon/neon-text'
 import { Eye, ThumbsUp, MessageSquare, Clock } from 'lucide-react'
 import { formatNumber, formatDate, formatDuration, getViewCountTag } from '@/lib/youtube'
 import { useLanguage } from '@/lib/language-context'
+import { getNeonColor, glowClasses, borderClasses, bgClasses, gradientViaClasses, cappedAnimationDelay } from '@/lib/neon-styles'
 import Image from 'next/image'
 
 interface Video {
@@ -28,37 +30,22 @@ interface NeonVideoCardProps {
   onClick?: () => void
 }
 
-export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => {
+export const NeonVideoCard = memo(function NeonVideoCard({ video, index, onClick }: NeonVideoCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [isPlayButtonHovered, setIsPlayButtonHovered] = useState(false)
   const { language } = useLanguage()
-  
-  const neonColors = ['pink', 'cyan', 'green', 'purple', 'orange'] as const
-  const color = neonColors[index % neonColors.length]
+
+  const color = getNeonColor(index)
   const viewCountTag = getViewCountTag(video.viewCount || 0)
 
-  const glowClasses = {
-    pink: 'neon-glow-pink',
-    cyan: 'neon-glow-cyan',
-    green: 'neon-glow-green',
-    purple: 'neon-glow-purple',
-    orange: 'shadow-lg shadow-neon-orange/20'
-  }
-
-  const borderClasses = {
-    pink: 'border-neon-pink',
-    cyan: 'border-neon-cyan',
-    green: 'border-neon-green',
-    purple: 'border-neon-purple',
-    orange: 'border-neon-orange'
-  }
-
-  const bgClasses = {
-    pink: 'bg-neon-pink',
-    cyan: 'bg-neon-cyan',
-    green: 'bg-neon-green',
-    purple: 'bg-neon-purple',
-    orange: 'bg-neon-orange'
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      onClick?.()
+    } else if (e.key === ' ' || e.key === 'Spacebar') {
+      // Prevent the page from scrolling when activating via Space.
+      e.preventDefault()
+      onClick?.()
+    }
   }
 
   return (
@@ -70,7 +57,7 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
         scale: isHovered ? 1.05 : 1
       }}
       transition={{
-        delay: index * 0.1,
+        delay: cappedAnimationDelay(index, 0.1),
         scale: { duration: 0.2, ease: "easeInOut" },
         opacity: { duration: 0.3 },
         y: { duration: 0.3 }
@@ -78,7 +65,10 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg"
     >
       <Card className={`
         relative overflow-hidden bg-vinyl-black/80 backdrop-blur-sm
@@ -87,20 +77,20 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
         ${isHovered ? 'shadow-2xl' : 'shadow-lg'}
       `}>
         {/* グロー効果 */}
-        <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-${color}/10 to-transparent transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-50'}`} />
-        
+        <div className={`absolute inset-0 bg-gradient-to-r from-transparent ${gradientViaClasses[color]} to-transparent transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-50'}`} />
+
         {/* サムネイル */}
         <div className="relative">
-          <Image 
-            src={video.thumbnail} 
+          <Image
+            src={video.thumbnail}
             alt={video.title}
             width={320}
             height={180}
             className="w-full h-48 object-cover transition-transform duration-300"
           />
-          
+
           {/* 再生ボタンオーバーレイ */}
-          <div 
+          <div
             className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
             onMouseEnter={() => setIsPlayButtonHovered(true)}
             onMouseLeave={() => setIsPlayButtonHovered(false)}
@@ -110,11 +100,11 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
                 scale: isPlayButtonHovered ? 1.2 : 1
               }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              whileTap={{ 
+              whileTap={{
                 scale: 0.9,
                 rotate: 360,
-                transition: { 
-                  duration: 0.6, 
+                transition: {
+                  duration: 0.6,
                   ease: "easeInOut",
                   type: "spring",
                   stiffness: 300,
@@ -125,14 +115,17 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
             >
               <motion.div
                 initial={{ scale: 1 }}
-                whileTap={{ 
+                whileTap={{
                   scale: [1, 1.5, 1],
                   opacity: [1, 0.7, 1]
                 }}
                 transition={{ duration: 0.6 }}
                 className="absolute inset-0 rounded-full bg-white/20"
               />
-              <span className="text-black text-2xl ml-1 relative z-10">▶</span>
+              {/* Decorative only: the whole card already exposes role="button" with
+                  the video title as its accessible name, so this glyph is hidden
+                  from assistive tech rather than duplicated with its own label. */}
+              <span aria-hidden="true" className="text-black text-2xl ml-1 relative z-10">▶</span>
             </motion.div>
           </div>
 
@@ -142,17 +135,17 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
               {formatDuration(video.duration)}
             </div>
           )}
-          
+
           <div className="absolute top-2 left-2 bg-black/80 text-white text-xs px-2 py-1 rounded-full">
             #{index + 1}
           </div>
-          
+
           {video.isShort && (
             <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
               #shorts
             </div>
           )}
-          
+
           {viewCountTag && (
             <div
               className={`absolute bottom-2 left-2 text-xs px-2 py-1 rounded-full font-medium shadow-md`}
@@ -182,7 +175,7 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
           <NeonText size="sm" color={color} className="line-clamp-2 text-left" animate={false}>
             {video.title}
           </NeonText>
-          
+
           {/* 統計情報（アイコン付き） */}
           <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
@@ -209,7 +202,7 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
               className={`h-2 rounded-full ${bgClasses[color]}`}
               initial={{ width: 0 }}
               animate={{ width: `${(video.popularityScore || 0) * 100}%` }}
-              transition={{ delay: index * 0.1 + 0.5, duration: 1 }}
+              transition={{ delay: cappedAnimationDelay(index, 0.1) + 0.5, duration: 1 }}
               style={{
                 filter: `drop-shadow(0 0 5px var(--neon-${color}))`
               }}
@@ -219,4 +212,4 @@ export const NeonVideoCard = ({ video, index, onClick }: NeonVideoCardProps) => 
       </Card>
     </motion.div>
   )
-} 
+})
