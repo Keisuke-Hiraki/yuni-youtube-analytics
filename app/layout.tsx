@@ -24,8 +24,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: "https://yuni-stellar-chart.vercel.app/og-image.png",
-        width: 1200,
-        height: 1200,
+        width: 2000,
+        height: 2000,
         alt: "YuNi Stellar Chart - Vsinger YuNiの動画分析ツール",
       },
     ],
