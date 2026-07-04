@@ -103,13 +103,15 @@ const ISO_8601_DURATION_PATTERN = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/
 
 /**
  * Parses an ISO 8601 duration string (e.g. "PT1M30S") into total seconds.
- * Returns 0 when the string does not match the expected pattern (e.g. "P0D" for live content).
+ * Returns null when the string does not match the expected pattern (e.g. "P0D" for live content),
+ * so callers can distinguish "unparseable" from "genuinely 0 seconds" instead of silently
+ * treating an unparseable duration as a (false) Short.
  * @param {string} duration - ISO 8601 duration string from the YouTube Data API
- * @returns {number} - Total duration in seconds
+ * @returns {number | null} - Total duration in seconds, or null if unparseable
  */
-function parseDurationSeconds(duration: string): number {
+function parseDurationSeconds(duration: string): number | null {
   const match = duration.match(ISO_8601_DURATION_PATTERN)
-  if (!match) return 0
+  if (!match) return null
 
   const hours = match[1] ? Number.parseInt(match[1], 10) : 0
   const minutes = match[2] ? Number.parseInt(match[2], 10) : 0
@@ -212,7 +214,9 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
           // ライブ配信はdurationがP0D等になり得るため、ショート判定から除外
           const isLiveContent = !!item.liveStreamingDetails
           const durationSeconds = parseDurationSeconds(item.contentDetails.duration)
-          const isShort = !isLiveContent && (durationSeconds <= 60 || titleHasShorts)
+          // An unparseable duration must never be treated as a (false) Short;
+          // only classify by duration when it was successfully parsed.
+          const isShort = !isLiveContent && ((durationSeconds !== null && durationSeconds <= 60) || titleHasShorts)
 
           // 統計情報の安全な取得
           const statistics = item.statistics || {}

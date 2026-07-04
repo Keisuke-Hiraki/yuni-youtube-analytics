@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { generateChatResponse, mapGroqError, type ChatMessage } from '@/lib/groq'
-import { fetchYuNiVideos } from '@/app/actions'
+import { fetchYuNiVideosWithCache } from '@/app/actions'
 import { debugLog, debugError } from '@/lib/utils'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
 
     debugLog('動画データ取得開始')
     // 動画データを取得
-    const { videos, error: videoError } = await fetchYuNiVideos()
+    const { videos, error: videoError } = await fetchYuNiVideosWithCache()
 
     if (videoError) {
       debugError('動画データ取得エラー:', videoError)

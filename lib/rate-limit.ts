@@ -58,15 +58,9 @@ export function checkRateLimit(key: string, limit: number, windowMs: number): Ra
   if (activeTimestamps.length >= limit) {
     const oldestActive = activeTimestamps[0]
     const retryAfterSeconds = Math.max(1, Math.ceil((oldestActive + windowMs - now) / 1000))
-    if (activeTimestamps.length === 0) {
-      // No active timestamps remain (shouldn't normally happen when the limit is
-      // exceeded, but guard against parking an empty array in the map).
-      requestLog.delete(key)
-    } else {
-      // Persist the trimmed (expired-filtered) array; deliberately do NOT record
-      // the rejected request itself, since it was not allowed.
-      requestLog.set(key, activeTimestamps)
-    }
+    // Persist the trimmed (expired-filtered) array; deliberately do NOT record
+    // the rejected request itself, since it was not allowed.
+    requestLog.set(key, activeTimestamps)
     return { allowed: false, retryAfterSeconds }
   }
 

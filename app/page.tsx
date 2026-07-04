@@ -13,9 +13,7 @@ export const revalidate = 3600 // 1時間ごとに自動更新
 const SHOW_HERO_SECTION = process.env.SHOW_HERO_SECTION !== 'false'
 
 export default async function Home() {
-  // キャッシュを無効化するためのタイムスタンプパラメータを追加
-  const timestamp = Date.now()
-  debugLog(`ページ読み込み開始: ${new Date(timestamp).toISOString()}`)
+  debugLog(`ページ読み込み開始: ${new Date().toISOString()}`)
 
   // キャッシュされたデータを取得（新しい関数を使用）
   const { videos, error, totalCount, lastUpdated, channelInfo } = await fetchYuNiVideosWithCache()
@@ -41,7 +39,7 @@ export default async function Home() {
                   '@type': 'VideoObject',
                   name: video.title,
                   description: video.description?.slice(0, 200) || video.title,
-                  thumbnailUrl: video.thumbnailUrl,
+                  ...(video.thumbnailUrl && { thumbnailUrl: video.thumbnailUrl }),
                   uploadDate: video.publishedAt,
                   url: `https://www.youtube.com/watch?v=${video.id}`,
                 },
