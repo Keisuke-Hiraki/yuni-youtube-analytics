@@ -426,9 +426,12 @@ export async function validateIndexData(): Promise<{
     // インデックス統計を取得
     const stats = await vectorIndex.info()
     debugLog('インデックス統計:', stats)
-    
+
+    // vectorCount にはタイムスタンプ管理用ベクトル（TIMESTAMP_ID）が1件含まれるため、実際の動画ベクトル数を算出する際は差し引く
+    const actualVectorCount = Math.max(0, stats.vectorCount - 1)
+
     // 基本的な検証
-    if (stats.vectorCount === 0) {
+    if (actualVectorCount === 0) {
       issues.push('インデックスにデータが存在しません')
       recommendations.push('npm run index-videos を実行してデータをインデックスしてください')
     }
