@@ -119,7 +119,7 @@ async function calculateTotalViewCount(videos: YouTubeVideo[]): Promise<number> 
   }
 }
 
-// 動画・チャンネル情報を取得する内部関数（エラー時は throw する）
+// 動画データのみを取得する内部関数（エラー時は throw する）
 //
 // unstable_cache does not access cookies/headers, and this function does not
 // use them either, so it is safe to wrap directly.
@@ -128,54 +128,18 @@ async function calculateTotalViewCount(videos: YouTubeVideo[]): Promise<number> 
 // field, so that unstable_cache never caches a failed fetch. If a failure
 // result were returned (not thrown), unstable_cache would treat it as a
 // successful value and lock in the error message for the full revalidate
-// window (1 hour).
+// window (1 hour). channelInfo is intentionally NOT fetched here (see
+// fetchChannelInfoRaw below) so that a channelInfo-only failure can never
+// contaminate this cache entry.
 async function fetchYuNiVideosRaw(): Promise<{
   videos: YouTubeVideo[]
   totalCount: number
   lastUpdated: string
-  channelInfo: ChannelInfo | null
 }> {
   const channelId = requireEnv("YOUTUBE_CHANNEL_ID")
 
   // 動画データを取得
   const videos = await getChannelVideos(channelId, 500)
-
-  // チャンネル情報を取得
-  let channelInfo = await getChannelInfo()
-
-  // チャンネル情報が取得できなかった場合のログ
-  if (!channelInfo) {
-    debugError("チャンネル情報の取得に失敗しました")
-    // 最小限のチャンネル情報を作成
-    channelInfo = {
-      id: channelId,
-      title: "YuNi Channel",
-      description: "",
-      subscriberCount: 0,
-      viewCount: 0,
-      videoCount: videos.length,
-      thumbnailUrl: "",
-    }
-  }
-
-  // APIから取得した総再生回数が0の場合、代替計算を使用
-  if (channelInfo.viewCount === 0) {
-    debugLog("APIから取得した総再生回数が0のため、代替計算を使用します")
-    const calculatedViewCount = await calculateTotalViewCount(videos)
-
-    // 計算した値で更新
-    channelInfo = {
-      ...channelInfo,
-      viewCount: calculatedViewCount,
-    }
-  }
-
-  debugLog("最終的なチャンネル情報:", {
-    title: channelInfo.title,
-    subscriberCount: channelInfo.subscriberCount,
-    viewCount: channelInfo.viewCount,
-    videoCount: channelInfo.videoCount,
-  })
 
   // 最終更新日時を記録
   const lastUpdated = new Date().toISOString()
@@ -184,8 +148,22 @@ async function fetchYuNiVideosRaw(): Promise<{
     videos,
     totalCount: videos.length,
     lastUpdated,
-    channelInfo,
   }
+}
+
+// チャンネル情報のみを取得する内部関数（エラー・未取得時は throw する）
+//
+// getChannelInfo() が null を返した場合、ここで throw することで
+// unstable_cache がフォールバック用のスタブ値をキャッシュしてしまうのを防ぐ。
+// フォールバック値の生成は非キャッシュ側（呼び出し元）で行う。
+async function fetchChannelInfoRaw(): Promise<ChannelInfo> {
+  const channelInfo = await getChannelInfo()
+
+  if (!channelInfo) {
+    throw new Error("チャンネル情報の取得に失敗しました")
+  }
+
+  return channelInfo
 }
 
 // fetchYuNiVideosRaw を unstable_cache でラップしたもの。
@@ -194,6 +172,65 @@ const getCachedVideos = unstable_cache(fetchYuNiVideosRaw, ["yuni-videos"], {
   revalidate: 3600,
   tags: ["videos"],
 })
+
+// fetchChannelInfoRaw を unstable_cache でラップしたもの。
+// videos と同じ "videos" タグを使うことで、refreshVideoData から両方を
+// まとめて無効化できる。
+const getCachedChannelInfo = unstable_cache(fetchChannelInfoRaw, ["yuni-channel-info"], {
+  revalidate: 3600,
+  tags: ["videos"],
+})
+
+// channelInfo取得の失敗時に使う、最小限のフォールバック情報を組み立てる。
+// APIから取得した総再生回数が0の場合は、動画データから代替計算する。
+async function buildFallbackChannelInfo(channelId: string, videos: YouTubeVideo[]): Promise<ChannelInfo> {
+  debugError("チャンネル情報の取得に失敗しました")
+
+  // フォールバック値の viewCount は常に 0 から始まるため、
+  // 総再生回数は必ず動画データからの代替計算で補う。
+  debugLog("APIから取得した総再生回数が0のため、代替計算を使用します")
+  const calculatedViewCount = await calculateTotalViewCount(videos)
+
+  return {
+    id: channelId,
+    title: "YuNi Channel",
+    description: "",
+    subscriberCount: 0,
+    viewCount: calculatedViewCount,
+    videoCount: videos.length,
+    thumbnailUrl: "",
+  }
+}
+
+// channelInfo を取得し、失敗時はフォールバック値を返す（このロジック自体は
+// キャッシュされないため、失敗しても次回呼び出しで再取得が試みられる）。
+// fetchChannelInfo は呼び出し元がキャッシュ版・非キャッシュ版を選択できるように
+// 引数として渡す。
+async function resolveChannelInfo(
+  channelId: string,
+  videos: YouTubeVideo[],
+  fetchChannelInfo: () => Promise<ChannelInfo>,
+): Promise<ChannelInfo> {
+  try {
+    const channelInfo = await fetchChannelInfo()
+
+    // APIから取得した総再生回数が0の場合、代替計算を使用（キャッシュ済みの
+    // 値には手を加えず、返却直前にその場で補完する）
+    if (channelInfo.viewCount === 0) {
+      debugLog("APIから取得した総再生回数が0のため、代替計算を使用します")
+      const calculatedViewCount = await calculateTotalViewCount(videos)
+      return {
+        ...channelInfo,
+        viewCount: calculatedViewCount,
+      }
+    }
+
+    return channelInfo
+  } catch (error) {
+    debugError("チャンネル情報取得エラー:", error)
+    return buildFallbackChannelInfo(channelId, videos)
+  }
+}
 
 // キャッシュ付きでデータを取得する関数（公開API・シグネチャは変更しない）
 export async function fetchYuNiVideosWithCache(): Promise<{
@@ -204,7 +241,16 @@ export async function fetchYuNiVideosWithCache(): Promise<{
   channelInfo: ChannelInfo | null
 }> {
   try {
-    return await getCachedVideos()
+    const { videos, totalCount, lastUpdated } = await getCachedVideos()
+    const channelId = requireEnv("YOUTUBE_CHANNEL_ID")
+    const channelInfo = await resolveChannelInfo(channelId, videos, getCachedChannelInfo)
+
+    return {
+      videos,
+      totalCount,
+      lastUpdated,
+      channelInfo,
+    }
   } catch (error) {
     // fetchYuNiVideosRaw throws on failure so that unstable_cache does not
     // cache the error. The error is converted to the `error` field here,
@@ -229,7 +275,16 @@ export async function fetchYuNiVideos(): Promise<{
   channelInfo: ChannelInfo | null
 }> {
   try {
-    return await fetchYuNiVideosRaw()
+    const channelId = requireEnv("YOUTUBE_CHANNEL_ID")
+    const { videos, totalCount, lastUpdated } = await fetchYuNiVideosRaw()
+    const channelInfo = await resolveChannelInfo(channelId, videos, fetchChannelInfoRaw)
+
+    return {
+      videos,
+      totalCount,
+      lastUpdated,
+      channelInfo,
+    }
   } catch (error) {
     debugError("動画取得エラー:", error)
     return {
