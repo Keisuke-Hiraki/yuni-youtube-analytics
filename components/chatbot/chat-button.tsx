@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react'
 import { MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ChatDialog } from './chat-dialog'
+import { useLanguage } from '@/lib/language-context'
 
 export function ChatButton() {
+  const { t } = useLanguage()
   const [isOpen, setIsOpen] = useState(false)
   const [isChatbotEnabled, setIsChatbotEnabled] = useState<boolean | null>(null)
 
@@ -24,20 +26,6 @@ export function ChatButton() {
     checkChatbotStatus()
   }, [])
 
-  // サイドパネルの開閉状態をbodyのクラスに反映
-  useEffect(() => {
-    if (isOpen) {
-      document.body.classList.add('chat-panel-open')
-    } else {
-      document.body.classList.remove('chat-panel-open')
-    }
-
-    // クリーンアップ
-    return () => {
-      document.body.classList.remove('chat-panel-open')
-    }
-  }, [isOpen])
-
   // チャットボットが無効または確認中の場合は何も表示しない
   if (isChatbotEnabled === null || !isChatbotEnabled) {
     return null
@@ -50,15 +38,15 @@ export function ChatButton() {
           onClick={() => setIsOpen(true)}
           size="lg"
           className="rounded-full w-14 h-14 shadow-lg hover:shadow-xl transition-all duration-200 bg-primary hover:bg-primary/90"
-          aria-label="チャットボットを開く"
+          aria-label={t('chatOpenLabel')}
         >
           <MessageCircle className="h-6 w-6" />
         </Button>
       </div>
-      
-      <ChatDialog 
-        isOpen={isOpen} 
-        onClose={() => setIsOpen(false)} 
+
+      <ChatDialog
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
       />
     </>
   )

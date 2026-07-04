@@ -3,8 +3,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { X, Send, Loader2 } from 'lucide-react'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Send, Loader2 } from 'lucide-react'
 import { debugLog, debugError } from '@/lib/utils'
+import { useLanguage } from '@/lib/language-context'
 
 interface ChatMessage {
   id: string
@@ -19,10 +21,12 @@ interface ChatDialogProps {
 }
 
 export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
+  const { t } = useLanguage()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
   // 初期メッセージを設定
   useEffect(() => {
@@ -31,12 +35,17 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
         {
           id: '1',
           role: 'assistant',
-          content: 'こんにちは！YuNiの動画について何でも聞いてください。動画の検索や質問にお答えします！',
+          content: t('chatInitialMessage'),
           timestamp: new Date()
         }
       ])
     }
-  }, [isOpen, messages.length])
+  }, [isOpen, messages.length, t])
+
+  // 新着メッセージ・ローディング状態が変わるたびに最下部へ自動スクロール
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [messages, isLoading])
 
   // コンポーネントがアンマウントされる際にリクエストをキャンセル
   useEffect(() => {
@@ -106,7 +115,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
       } catch (parseError) {
         debugError('JSONパースエラー:', parseError)
         debugError('レスポンステキスト:', responseText)
-        throw new Error(`サーバーから無効なレスポンスが返されました: ${responseText.substring(0, 100)}`)
+        throw new Error(`${t('chatErrorInvalidResponse')}: ${responseText.substring(0, 100)}`)
       }
 
       if (response.ok) {
@@ -125,16 +134,16 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
       if (error instanceof Error && error.name === 'AbortError') {
         return
       }
-      
+
       debugError('チャットエラー:', error)
-      
+
       // エラーの詳細情報を含むメッセージを作成
       let errorContent = ''
-      
+
       if (error instanceof Error) {
         // Groq公式ドキュメントに基づくエラーハンドリング
         // https://console.groq.com/docs/errors
-        
+
         if (error.message.includes('429') || error.message.includes('Too Many Requests')) {
           // レート制限の場合は、サーバーからの親切なメッセージをそのまま使用
           errorContent = error.message
@@ -142,27 +151,27 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
           // Flex Tier容量超過の場合も、サーバーからのメッセージを使用
           errorContent = error.message
         } else if (error.message.includes('413') || error.message.includes('Request Entity Too Large')) {
-          errorContent = '送信されたメッセージが長すぎます。質問を短くしてもう一度お試しください。'
+          errorContent = t('chatErrorTooLarge')
         } else if (error.message.includes('422') || error.message.includes('Unprocessable Entity')) {
-          errorContent = 'リクエストの内容に問題があります。質問を見直してもう一度お試しください。'
+          errorContent = t('chatErrorUnprocessable')
         } else if (error.message.includes('fetch')) {
-          errorContent = 'ネットワーク接続の問題が発生しました。インターネット接続を確認してから、もう一度お試しください。'
+          errorContent = t('chatErrorNetwork')
         } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-          errorContent = 'APIキーが無効または未設定です。管理者にお問い合わせください。'
+          errorContent = t('chatErrorUnauthorized')
         } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
-          errorContent = 'サーバー内部エラーが発生しました。しばらく経ってからもう一度お試しください。'
+          errorContent = t('chatErrorServerInternal')
         } else if (error.message.includes('502') || error.message.includes('Bad Gateway')) {
-          errorContent = 'サーバー接続エラーが発生しました。しばらく経ってからもう一度お試しください。'
+          errorContent = t('chatErrorBadGateway')
         } else if (error.message.includes('503') || error.message.includes('Service Unavailable')) {
-          errorContent = 'サービスが一時的に利用できません。メンテナンス中の可能性があります。しばらく経ってからもう一度お試しください。'
+          errorContent = t('chatErrorServiceUnavailable')
         } else {
           // その他のエラーの場合は詳細情報を表示
-          errorContent = `エラーが発生しました。\n\nエラー名: ${error.name}\nエラーメッセージ: ${error.message}\n\n開発者コンソールで詳細を確認してください。`
+          errorContent = `${t('chatErrorUnknownPrefix')}\n\n${t('chatErrorNameLabel')}: ${error.name}\n${t('chatErrorMessageLabel')}: ${error.message}\n\n${t('chatErrorCheckConsole')}`
         }
       } else {
-        errorContent = `予期しないエラーが発生しました。\n\nエラー内容: ${String(error)}`
+        errorContent = `${t('chatErrorUnexpectedPrefix')}\n\n${t('chatErrorContentLabel')}: ${String(error)}`
       }
-      
+
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -175,7 +184,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       sendMessage()
@@ -183,37 +192,21 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
   }
 
   return (
-    <>
-      {/* オーバーレイ（背景クリックで閉じる） */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/20 z-40 md:hidden"
-          onClick={onClose}
-        />
-      )}
-      
-      {/* サイドパネル */}
-      <div className={`
-        fixed top-0 right-0 h-full w-full md:w-96 bg-background border-l shadow-lg z-50
-        transform transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : 'translate-x-full'}
-        flex flex-col
-      `}>
+    <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-md flex flex-col p-0 gap-0"
+      >
         {/* ヘッダー */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">YuNi動画アシスタント</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="h-8 w-8 p-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <SheetHeader className="p-4 border-b text-left space-y-0">
+          <SheetTitle>{t('chatTitle')}</SheetTitle>
+        </SheetHeader>
 
         {/* メッセージエリア */}
-        <div className="flex-1 overflow-y-auto p-4 chat-messages">
+        <div
+          className="flex-1 overflow-y-auto p-4 chat-messages"
+          aria-live="polite"
+        >
           <div className="space-y-4">
             {messages.map((message) => (
               <div
@@ -243,6 +236,8 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
                 </div>
               </div>
             )}
+            {/* 自動スクロール用のアンカー */}
+            <div ref={messagesEndRef} />
           </div>
         </div>
 
@@ -252,8 +247,9 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
             <Input
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="メッセージを入力..."
+              onKeyDown={handleKeyDown}
+              placeholder={t('chatPlaceholder')}
+              aria-label={t('chatInputLabel')}
               disabled={isLoading}
               className="flex-1"
             />
@@ -261,6 +257,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
               onClick={sendMessage}
               disabled={!inputMessage.trim() || isLoading}
               size="sm"
+              aria-label={t('chatSendLabel')}
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -270,7 +267,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
             </Button>
           </div>
         </div>
-      </div>
-    </>
+      </SheetContent>
+    </Sheet>
   )
-} 
+}
