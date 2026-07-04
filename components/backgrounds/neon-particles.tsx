@@ -107,13 +107,22 @@ const Particles: React.FC<ParticlesProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mouseRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const animationFrameIdRef = useRef<number | null>(null);
+  const isRunningRef = useRef(false);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
+    // Check if prefers-reduced-motion is set - do not start animation if true
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      return;
+    }
+
     const renderer = new Renderer({ depth: false, alpha: true });
     const gl = renderer.gl;
+    gl.canvas.setAttribute('aria-hidden', 'true');
     container.appendChild(gl.canvas);
     gl.clearColor(0, 0, 0, 0);
 
@@ -137,7 +146,6 @@ const Particles: React.FC<ParticlesProps> = ({
     };
 
     if (moveParticlesOnHover) {
-      // windowレベルでマウスイベントを監視し、container内での座標を計算
       window.addEventListener("mousemove", handleMouseMove);
     }
 
@@ -184,13 +192,19 @@ const Particles: React.FC<ParticlesProps> = ({
 
     const particles = new Mesh(gl, { mode: gl.POINTS, geometry, program });
 
-    let animationFrameId: number;
     let lastTime = performance.now();
     let elapsed = 0;
+    const targetFPS = 30;
+    const frameInterval = 1000 / targetFPS; // ~33.33ms per frame
 
     const update = (t: number) => {
-      animationFrameId = requestAnimationFrame(update);
+      // Frame rate limiting: only update if enough time has passed
       const delta = t - lastTime;
+      if (delta < frameInterval) {
+        animationFrameIdRef.current = requestAnimationFrame(update);
+        return;
+      }
+
       lastTime = t;
       elapsed += delta * speed;
 
@@ -211,16 +225,38 @@ const Particles: React.FC<ParticlesProps> = ({
       }
 
       renderer.render({ scene: particles, camera });
+
+      if (isRunningRef.current) {
+        animationFrameIdRef.current = requestAnimationFrame(update);
+      }
     };
 
-    animationFrameId = requestAnimationFrame(update);
+    isRunningRef.current = true;
+    animationFrameIdRef.current = requestAnimationFrame(update);
+
+    // Handle visibility change to pause/resume animation
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isRunningRef.current = false;
+      } else {
+        isRunningRef.current = true;
+        lastTime = performance.now();
+        animationFrameIdRef.current = requestAnimationFrame(update);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("resize", resize);
       if (moveParticlesOnHover) {
         window.removeEventListener("mousemove", handleMouseMove);
       }
-      cancelAnimationFrame(animationFrameId);
+      isRunningRef.current = false;
+      if (animationFrameIdRef.current !== null) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
       if (container.contains(gl.canvas)) {
         container.removeChild(gl.canvas);
       }
@@ -229,6 +265,7 @@ const Particles: React.FC<ParticlesProps> = ({
     particleCount,
     particleSpread,
     speed,
+    particleColors,
     moveParticlesOnHover,
     particleHoverFactor,
     alphaParticles,

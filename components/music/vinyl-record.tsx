@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 
 export const VinylRecord = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
   const sizeClasses = {
@@ -9,11 +9,14 @@ export const VinylRecord = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
     lg: 'w-32 h-32'
   }
 
+  const shouldReduceMotion = useReducedMotion()
+
   return (
     <motion.div
       className={`${sizeClasses[size]} relative`}
-      animate={{ rotate: 360 }}
-      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+      animate={shouldReduceMotion ? { rotate: 0 } : { rotate: 360 }}
+      transition={shouldReduceMotion ? { duration: 0 } : { duration: 3, repeat: Infinity, ease: "linear" }}
+      aria-hidden="true"
     >
       {/* レコード本体 */}
       <div className="w-full h-full rounded-full bg-gradient-to-r from-vinyl-black to-speaker-gray border-2 border-neon-pink neon-glow-pink vinyl-grooves">

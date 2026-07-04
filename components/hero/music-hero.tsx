@@ -49,6 +49,7 @@ export const MusicHero = () => {
         className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
         animate={{ y: [0, 10, 0] }}
         transition={{ duration: 2, repeat: Infinity }}
+        aria-hidden="true"
       >
         <div className="w-6 h-10 border-2 border-neon-cyan rounded-full flex justify-center">
           <div className="w-1 h-3 bg-neon-cyan rounded-full mt-2 animate-pulse" />

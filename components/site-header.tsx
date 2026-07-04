@@ -18,14 +18,14 @@ export function SiteHeader() {
           className="flex items-center gap-3 transition-all duration-300 hover:scale-105"
         >
           <div className="relative">
-            <Image 
-              src="/icon.png" 
-              alt="YuNi Logo" 
-              width={32} 
-              height={32} 
-              className="rounded-full border-2 border-neon-cyan neon-glow-cyan" 
+            <Image
+              src="/icon.png"
+              alt="YuNi Logo"
+              width={32}
+              height={32}
+              className="rounded-full border-2 border-neon-cyan neon-glow-cyan"
             />
-            <div className="absolute inset-0 rounded-full bg-neon-cyan/20 animate-pulse" />
+            <div className="absolute inset-0 rounded-full bg-neon-cyan/20 animate-pulse" aria-hidden="true" />
           </div>
           <NeonText size="md" color="pink" animate={false}>
             {SITE_TITLE}
