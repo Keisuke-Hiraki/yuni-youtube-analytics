@@ -1,9 +1,7 @@
 "use client"
 
 import { useLanguage } from "@/lib/language-context"
-import { SITE_TITLE } from "@/lib/language-context"
 import { RefreshButton } from "@/components/refresh-button"
-import { NeonText } from "@/components/neon/neon-text"
 import { formatLargeNumber } from "@/lib/youtube"
 import { Eye, Users, Video } from "lucide-react"
 import type { ChannelInfo } from "@/app/actions"

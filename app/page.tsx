@@ -15,7 +15,7 @@ const SHOW_HERO_SECTION = process.env.SHOW_HERO_SECTION !== 'false'
 
 export async function generateMetadata(): Promise<Metadata> {
   // チャンネル情報を取得（キャッシュ機能付きの関数を使用）
-  const { channelInfo } = await fetchYuNiVideosWithCache()
+  await fetchYuNiVideosWithCache()
 
   // 動的なメタデータを生成
   return {

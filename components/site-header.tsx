@@ -8,7 +8,7 @@ import { useLanguage } from "@/lib/language-context"
 import { SITE_TITLE } from "@/lib/language-context"
 
 export function SiteHeader() {
-  const { t } = useLanguage()
+  useLanguage()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-neon-pink/30 bg-music-dark/80 backdrop-blur-md">

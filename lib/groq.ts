@@ -103,7 +103,7 @@ async function prepareVideoDataWithRAG(videos: YouTubeVideo[], message: string) 
         }
         
         // 統計処理用にソート
-        let sortedVideos = [...statsVideos]
+        const sortedVideos = [...statsVideos]
         if (message.includes('少ない') || message.includes('最小')) {
           sortedVideos.sort((a, b) => a.viewCount - b.viewCount)
         } else {
@@ -277,16 +277,6 @@ function prepareVideoDataFallback(videos: YouTubeVideo[], message: string, query
         source: 'fallback'
       }
   }
-}
-
-// 動画データを検索用のテキストに変換
-function formatVideoForSearch(video: YouTubeVideo): string {
-  return `タイトル: ${video.title}
-視聴回数: ${video.viewCount.toLocaleString()}回
-いいね数: ${video.likeCount.toLocaleString()}
-コメント数: ${video.commentCount.toLocaleString()}
-公開日: ${video.publishedAt}
-URL: https://www.youtube.com/watch?v=${video.id}`
 }
 
 export async function generateChatResponse(

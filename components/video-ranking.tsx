@@ -13,7 +13,6 @@ import {
   Filter,
   X,
   SlidersHorizontal,
-  ArrowUpDown,
   ArrowUp,
   ArrowDown,
 } from "lucide-react"
@@ -496,7 +495,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
               )}
               {searchQuery && (
                 <Badge variant="secondary" className="gap-1 flex items-center">
-                  "{searchQuery}"
+                  &quot;{searchQuery}&quot;
                   <Button variant="ghost" size="icon" className="h-4 w-4 p-0 ml-1" onClick={() => setSearchQuery("")}>
                     <X className="h-3 w-3" />
                   </Button>
@@ -537,7 +536,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
               try {
                 const videoYear = new Date(video.publishedAt).getFullYear().toString()
                 filtered = filtered && videoYear === yearFilter
-              } catch (error) {
+              } catch {
                 return false
               }
             }
