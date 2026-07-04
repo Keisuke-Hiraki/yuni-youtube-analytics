@@ -1,7 +1,21 @@
-import { Index } from '@upstash/vector'
+import { Index, type QueryResult } from '@upstash/vector'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { YouTubeVideo } from './youtube'
 import { debugLog, debugError } from './utils'
+
+// Upstash Vectorに保存している動画メタデータの型
+interface VideoMetadata {
+  title?: string
+  description?: string
+  publishedAt?: string
+  viewCount?: number
+  likeCount?: number
+  commentCount?: number
+  duration?: string
+  isLiveContent?: boolean
+  isShort?: boolean
+  originalId?: string
+}
 
 // Upstash Vector DBクライアントの初期化
 let vectorIndex: Index | null = null
@@ -293,17 +307,17 @@ export async function searchVideos(query: string, topK: number = 20): Promise<Yo
     
     // 結果をYouTubeVideo形式に変換（型安全性向上）
     const videos: YouTubeVideo[] = results
-      ?.filter((result: any) => {
-        return result.metadata && 
-               result.score && 
+      ?.filter((result: QueryResult<VideoMetadata>) => {
+        return result.metadata &&
+               result.score &&
                result.score > 0.7 &&
                typeof result.metadata.viewCount === 'number' &&
                typeof result.metadata.likeCount === 'number'
       })
-      .map((result: any) => {
+      .map((result: QueryResult<VideoMetadata>) => {
         const metadata = result.metadata!
         return {
-          id: result.id,
+          id: String(result.id),
           title: String(metadata.title || ''),
           description: String(metadata.description || ''),
           publishedAt: String(metadata.publishedAt || ''),
@@ -357,16 +371,16 @@ export async function searchVideosForStats(query: string, year?: number): Promis
     const videoMap = new Map<string, YouTubeVideo>()
     
     results
-      ?.filter((result: any) => {
-        return result.metadata && 
-               result.score && 
+      ?.filter((result: QueryResult<VideoMetadata>) => {
+        return result.metadata &&
+               result.score &&
                result.score > 0.5 &&
                typeof result.metadata.viewCount === 'number' &&
                typeof result.metadata.likeCount === 'number'
       })
-      .forEach((result: any) => {
+      .forEach((result: QueryResult<VideoMetadata>) => {
         const metadata = result.metadata!
-        const originalId = metadata.originalId || result.id.replace('_stats', '')
+        const originalId = metadata.originalId || String(result.id).replace('_stats', '')
         
         if (!videoMap.has(originalId)) {
           videoMap.set(originalId, {

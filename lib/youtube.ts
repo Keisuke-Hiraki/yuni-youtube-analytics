@@ -54,6 +54,50 @@ export function getViewCountTag(viewCount: number): ViewCountTag | null {
 
 import { debugLog, debugError } from '@/lib/utils'
 
+// YouTube Data API v3 レスポンスの型定義（本アプリで使用するフィールドのみ）
+interface YouTubePlaylistItemResource {
+  snippet?: {
+    resourceId?: {
+      videoId?: string
+    }
+  }
+}
+
+interface YouTubePlaylistItemsResponse {
+  items?: YouTubePlaylistItemResource[]
+  nextPageToken?: string
+}
+
+interface YouTubeVideoThumbnail {
+  url: string
+}
+
+interface YouTubeVideoItem {
+  id: string
+  snippet: {
+    title: string
+    description: string
+    publishedAt: string
+    thumbnails: {
+      high?: YouTubeVideoThumbnail
+      default?: YouTubeVideoThumbnail
+    }
+  }
+  statistics?: {
+    viewCount?: string
+    likeCount?: string
+    commentCount?: string
+  }
+  contentDetails: {
+    duration: string
+  }
+  liveStreamingDetails?: unknown
+}
+
+interface YouTubeVideosResponse {
+  items?: YouTubeVideoItem[]
+}
+
 /**
  * YouTube動画がShort動画か通常動画かを判定する
  * 新しい仕様: shortsURLにアクセスしてリダイレクトされない場合はショート動画
@@ -127,7 +171,7 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
     const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads
 
     // 全ての動画を取得するためのページネーション処理
-    let allPlaylistItems: any[] = []
+    let allPlaylistItems: YouTubePlaylistItemResource[] = []
     let nextPageToken: string | null = null
     let totalFetched = 0
 
@@ -142,7 +186,7 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
         throw new Error(`プレイリスト情報の取得に失敗: ${playlistResponse.status} ${playlistResponse.statusText}`)
       }
 
-      const playlistData: any = await playlistResponse.json()
+      const playlistData: YouTubePlaylistItemsResponse = await playlistResponse.json()
 
       if (!playlistData.items || playlistData.items.length === 0) {
         break
@@ -168,8 +212,8 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
 
     for (let i = 0; i < allPlaylistItems.length; i += chunkSize) {
       const chunk = allPlaylistItems.slice(i, i + chunkSize)
-        .filter(item => item && item.snippet && item.snippet.resourceId && item.snippet.resourceId.videoId)
-        .map((item) => item.snippet.resourceId.videoId)
+        .map((item) => item?.snippet?.resourceId?.videoId)
+        .filter((videoId): videoId is string => Boolean(videoId))
       if (chunk.length > 0) {
         videoIdChunks.push(chunk)
       }
@@ -189,15 +233,15 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
         throw new Error(`動画情報の取得に失敗: ${videosResponse.status} ${videosResponse.statusText}`)
       }
 
-      const videosData = await videosResponse.json()
+      const videosData: YouTubeVideosResponse = await videosResponse.json()
 
       if (videosData.items && videosData.items.length > 0) {
         // 全ての動画IDに対してショート動画かどうかを一括チェック
         const shortsResults = await checkMultipleShorts(videoIds)
 
         const videos = videosData.items
-          .filter((item: any) => item && item.id && item.snippet && item.statistics)
-          .map((item: any) => {
+          .filter((item) => item && item.id && item.snippet && item.statistics)
+          .map((item) => {
           // タイトルに基づくショート判定（バックアップ方法）
           const titleHasShorts =
             item.snippet.title.toLowerCase().includes("#shorts") || item.snippet.title.toLowerCase().includes("#short")
@@ -228,7 +272,7 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
             title: item.snippet.title,
             description: item.snippet.description,
             publishedAt: item.snippet.publishedAt,
-            thumbnailUrl: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default?.url,
+            thumbnailUrl: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default?.url || "",
             viewCount,
             likeCount,
             commentCount,
