@@ -23,24 +23,33 @@ export default async function Home() {
   // Build JSON-LD structured data
   const jsonLdData = {
     '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: 'YuNi Stellar Chart',
-    url: 'https://yuni-stellar-chart.vercel.app',
-    ...(videos && videos.length > 0 && {
-      potentialAction: {
-        '@type': 'SearchAction',
-        target: 'https://yuni-stellar-chart.vercel.app?q={search_term_string}',
-        'query-input': 'required name=search_term_string',
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        name: 'YuNi Stellar Chart',
+        url: 'https://yuni-stellar-chart.vercel.app',
       },
-      subOrganization: videos.slice(0, 10).map((video) => ({
-        '@type': 'VideoObject',
-        name: video.title,
-        description: video.description,
-        thumbnailUrl: video.thumbnailUrl,
-        uploadDate: video.publishedAt,
-        url: `https://www.youtube.com/watch?v=${video.id}`,
-      })),
-    }),
+      ...(videos && videos.length > 0
+        ? [
+            {
+              '@type': 'ItemList',
+              name: 'YuNi Video Ranking',
+              itemListElement: videos.slice(0, 10).map((video, i) => ({
+                '@type': 'ListItem',
+                position: i + 1,
+                item: {
+                  '@type': 'VideoObject',
+                  name: video.title,
+                  description: video.description?.slice(0, 200) || video.title,
+                  thumbnailUrl: video.thumbnailUrl,
+                  uploadDate: video.publishedAt,
+                  url: `https://www.youtube.com/watch?v=${video.id}`,
+                },
+              })),
+            },
+          ]
+        : []),
+    ],
   }
 
   // Escape JSON-LD data to prevent XSS (replace < with <)
