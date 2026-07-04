@@ -201,7 +201,9 @@ const Particles: React.FC<ParticlesProps> = ({
       // Frame rate limiting: only update if enough time has passed
       const delta = t - lastTime;
       if (delta < frameInterval) {
-        animationFrameIdRef.current = requestAnimationFrame(update);
+        if (isRunningRef.current) {
+          animationFrameIdRef.current = requestAnimationFrame(update);
+        }
         return;
       }
 
@@ -234,13 +236,16 @@ const Particles: React.FC<ParticlesProps> = ({
     isRunningRef.current = true;
     animationFrameIdRef.current = requestAnimationFrame(update);
 
-    // Handle visibility change to pause/resume animation
+    // Handle visibility change to pause/resume animation; ensure single rAF chain exists
     const handleVisibilityChange = () => {
       if (document.hidden) {
         isRunningRef.current = false;
       } else {
         isRunningRef.current = true;
         lastTime = performance.now();
+        if (animationFrameIdRef.current !== null) {
+          cancelAnimationFrame(animationFrameIdRef.current);
+        }
         animationFrameIdRef.current = requestAnimationFrame(update);
       }
     };
