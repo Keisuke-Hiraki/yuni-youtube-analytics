@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import * as PopoverPrimitive from "@radix-ui/react-popover"
 import {
   AlertCircle,
@@ -324,6 +324,27 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     return filteredAndSortedVideos.slice(0, limitCount)
   }, [filteredAndSortedVideos, limitCount])
 
+  // YouTubeVideo を NeonVideoCard が期待する形式に変換したリスト。
+  // useMemo で filteredVideos が変わらない限り同じ配列（＝同じオブジェクト参照）を
+  // 返すため、NeonVideoCard に渡す video prop が親の再レンダリングごとに
+  // 再生成されず、React.memo によるスキップが有効になる。
+  const neonVideos = useMemo(() => {
+    return filteredVideos
+      .filter((video): video is YouTubeVideo => !!(video && video.id))
+      .map((video) => ({
+        id: video.id,
+        title: video.title || '',
+        thumbnail: video.thumbnailUrl || "/placeholder.svg?height=180&width=320",
+        viewCount: video.viewCount || 0,
+        likeCount: video.likeCount || 0,
+        commentCount: video.commentCount || 0,
+        popularityScore: Math.min((video.viewCount || 0) / 10000000, 1), // 1000万再生を最大値として正規化
+        publishedAt: video.publishedAt || '',
+        duration: video.duration || '',
+        isShort: video.isShort || false,
+      }))
+  }, [filteredVideos])
+
   // アクティブなフィルター数を更新（ソート条件は除外）
   useEffect(() => {
     let count = 0
@@ -334,10 +355,53 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     setActiveFilters(count)
   }, [yearFilter, limitCount, searchQuery, excludeShorts])
 
-  const handleVideoClick = (video: YouTubeVideo) => {
+  // useCallback で安定した参照を保つ（setSelectedVideo は useState のセッターで
+  // 常に同一参照のため、依存配列は空でよい）。これにより VideoListItem に渡す
+  // onSelect prop の参照が親の再レンダリングを跨いで変化せず、React.memo が機能する。
+  const handleVideoClick = useCallback((video: YouTubeVideo) => {
     // ダイアログを即時表示（以前はクリックアニメーションのため300msの遅延があった）
     setSelectedVideo(video)
-  }
+  }, [])
+
+  // NeonVideoCard は表示用に変換された neonVideo（id のみ共通）を持つため、
+  // id を受け取って元の YouTubeVideo を filteredVideos から検索してから
+  // handleVideoClick に渡す。filteredVideos は useMemo で安定しているため、
+  // 実際にリストが変わらない限りこの関数の参照も変化しない。
+  const handleNeonCardSelect = useCallback((id: string) => {
+    const video = filteredVideos.find((v) => v && v.id === id)
+    if (video) {
+      handleVideoClick(video)
+    }
+  }, [filteredVideos, handleVideoClick])
+
+  const handleItemMouseEnter = useCallback((id: string) => {
+    // 既存のタイムアウトをクリア（hoverTimeoutRef は ref なので参照は不変）
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+    setHoveredItemId(id)
+  }, [])
+
+  const handleItemMouseLeave = useCallback(() => {
+    // 少し遅延させてホバー状態をクリア（安定性向上）
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredItemId(null)
+      setHoveredPlayButtonId(null)
+    }, 100)
+  }, [])
+
+  const handlePlayButtonMouseEnter = useCallback((id: string) => {
+    // 既存のタイムアウトをクリア
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+    setHoveredPlayButtonId(id)
+  }, [])
+
+  const handlePlayButtonMouseLeave = useCallback(() => {
+    // 再生ボタンから離れた時は即座にクリア
+    setHoveredPlayButtonId(null)
+  }, [])
 
   const closeDialog = () => {
     setSelectedVideo(null)
@@ -572,32 +636,14 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           <TabsContent value="grid" className="w-full">
             {/* ネオンカードを使用したグリッドレイアウト（モバイル最適化） */}
             <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8'}`}>
-              {filteredVideos && Array.isArray(filteredVideos) ? filteredVideos.map((video, index) => {
-                if (!video || !video.id) return null
-
-                // YouTubeVideoをNeonVideoCardが期待する形式に変換
-                const neonVideo = {
-                  id: video.id,
-                  title: video.title || '',
-                  thumbnail: video.thumbnailUrl || "/placeholder.svg?height=180&width=320",
-                  viewCount: video.viewCount || 0,
-                  likeCount: video.likeCount || 0,
-                  commentCount: video.commentCount || 0,
-                  popularityScore: Math.min((video.viewCount || 0) / 10000000, 1), // 1000万再生を最大値として正規化
-                  publishedAt: video.publishedAt || '',
-                  duration: video.duration || '',
-                  isShort: video.isShort || false
-                }
-
-                return (
-                  <NeonVideoCard
-                    key={video.id}
-                    video={neonVideo}
-                    index={index}
-                    onClick={() => handleVideoClick(video)}
-                  />
-                )
-              }).filter(Boolean) : null}
+              {neonVideos.map((neonVideo, index) => (
+                <NeonVideoCard
+                  key={neonVideo.id}
+                  video={neonVideo}
+                  index={index}
+                  onSelect={handleNeonCardSelect}
+                />
+              ))}
             </div>
           </TabsContent>
 
@@ -618,32 +664,11 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                     language={language}
                     isHovered={hoveredItemId === video.id}
                     isPlayButtonHovered={hoveredPlayButtonId === video.id}
-                    onClick={() => handleVideoClick(video)}
-                    onMouseEnter={() => {
-                      // 既存のタイムアウトをクリア
-                      if (hoverTimeoutRef.current) {
-                        clearTimeout(hoverTimeoutRef.current)
-                      }
-                      setHoveredItemId(video.id)
-                    }}
-                    onMouseLeave={() => {
-                      // 少し遅延させてホバー状態をクリア（安定性向上）
-                      hoverTimeoutRef.current = setTimeout(() => {
-                        setHoveredItemId(null)
-                        setHoveredPlayButtonId(null)
-                      }, 100)
-                    }}
-                    onPlayButtonMouseEnter={() => {
-                      // 既存のタイムアウトをクリア
-                      if (hoverTimeoutRef.current) {
-                        clearTimeout(hoverTimeoutRef.current)
-                      }
-                      setHoveredPlayButtonId(video.id)
-                    }}
-                    onPlayButtonMouseLeave={() => {
-                      // 再生ボタンから離れた時は即座にクリア
-                      setHoveredPlayButtonId(null)
-                    }}
+                    onSelect={handleVideoClick}
+                    onItemMouseEnter={handleItemMouseEnter}
+                    onItemMouseLeave={handleItemMouseLeave}
+                    onPlayButtonMouseEnter={handlePlayButtonMouseEnter}
+                    onPlayButtonMouseLeave={handlePlayButtonMouseLeave}
                   />
                 )
               }).filter(Boolean) : null}

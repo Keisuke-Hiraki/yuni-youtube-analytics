@@ -16,10 +16,13 @@ interface VideoListItemProps {
   language: string
   isHovered: boolean
   isPlayButtonHovered: boolean
-  onClick: () => void
-  onMouseEnter: () => void
-  onMouseLeave: () => void
-  onPlayButtonMouseEnter: () => void
+  // Stable callbacks (memoized with useCallback in the parent) that receive
+  // the item/id, so their identity doesn't change on every parent render
+  // and React.memo can actually skip re-rendering unaffected rows.
+  onSelect: (video: YouTubeVideo) => void
+  onItemMouseEnter: (id: string) => void
+  onItemMouseLeave: () => void
+  onPlayButtonMouseEnter: (id: string) => void
   onPlayButtonMouseLeave: () => void
 }
 
@@ -30,22 +33,26 @@ export const VideoListItem = memo(function VideoListItem({
   language,
   isHovered,
   isPlayButtonHovered,
-  onClick,
-  onMouseEnter,
-  onMouseLeave,
+  onSelect,
+  onItemMouseEnter,
+  onItemMouseLeave,
   onPlayButtonMouseEnter,
   onPlayButtonMouseLeave,
 }: VideoListItemProps) {
   const viewCountTag = getViewCountTag(video.viewCount || 0)
   const color = getNeonColor(index)
 
+  const handleClick = () => {
+    onSelect(video)
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      onClick()
+      handleClick()
     } else if (e.key === " " || e.key === "Spacebar") {
       // Prevent the page from scrolling when activating via Space.
       e.preventDefault()
-      onClick()
+      handleClick()
     }
   }
 
@@ -70,12 +77,12 @@ export const VideoListItem = memo(function VideoListItem({
       } rounded-lg cursor-pointer transition-all duration-300 ease-out bg-vinyl-black/80 backdrop-blur-sm active:scale-98 ${
         isHovered ? "shadow-2xl" : "shadow-lg"
       } hover:border-opacity-100 ${isMobile ? "mx-0" : "mx-1"} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
-      onClick={onClick}
+      onClick={handleClick}
       role="button"
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
+      onMouseEnter={() => onItemMouseEnter(video.id)}
+      onMouseLeave={onItemMouseLeave}
     >
       {/* グロー効果 */}
       <div
@@ -115,7 +122,7 @@ export const VideoListItem = memo(function VideoListItem({
                 },
               }}
               className={`${isMobile ? "w-8 h-8" : "w-10 h-10 sm:w-12 sm:h-12"} rounded-full ${bgClasses[color]} flex items-center justify-center ${glowClasses[color]} relative overflow-hidden`}
-              onMouseEnter={onPlayButtonMouseEnter}
+              onMouseEnter={() => onPlayButtonMouseEnter(video.id)}
               onMouseLeave={onPlayButtonMouseLeave}
             >
               <motion.div

@@ -27,10 +27,12 @@ interface Video {
 interface NeonVideoCardProps {
   video: Video
   index: number
-  onClick?: () => void
+  // Stable callback receiving the video id, so the parent can pass a
+  // useCallback-memoized handler instead of a fresh closure per render.
+  onSelect?: (id: string) => void
 }
 
-export const NeonVideoCard = memo(function NeonVideoCard({ video, index, onClick }: NeonVideoCardProps) {
+export const NeonVideoCard = memo(function NeonVideoCard({ video, index, onSelect }: NeonVideoCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [isPlayButtonHovered, setIsPlayButtonHovered] = useState(false)
   const { language } = useLanguage()
@@ -38,13 +40,17 @@ export const NeonVideoCard = memo(function NeonVideoCard({ video, index, onClick
   const color = getNeonColor(index)
   const viewCountTag = getViewCountTag(video.viewCount || 0)
 
+  const handleClick = () => {
+    onSelect?.(video.id)
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      onClick?.()
+      handleClick()
     } else if (e.key === ' ' || e.key === 'Spacebar') {
       // Prevent the page from scrolling when activating via Space.
       e.preventDefault()
-      onClick?.()
+      handleClick()
     }
   }
 
@@ -62,7 +68,7 @@ export const NeonVideoCard = memo(function NeonVideoCard({ video, index, onClick
         opacity: { duration: 0.3 },
         y: { duration: 0.3 }
       }}
-      onClick={onClick}
+      onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       role="button"
