@@ -115,7 +115,7 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
       } catch (parseError) {
         debugError('JSONパースエラー:', parseError)
         debugError('レスポンステキスト:', responseText)
-        throw new Error(`${t('chatErrorInvalidResponse')}: ${responseText.substring(0, 100)}`)
+        throw new Error('Invalid JSON response from /api/chat')
       }
 
       if (response.ok) {
@@ -127,7 +127,50 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
         }
         setMessages(prev => [...prev, assistantMessage])
       } else {
-        throw new Error(data.error || `HTTPエラー: ${response.status}`)
+        // サーバーからのエラーメッセージ（既にユーザー向けに整形済み）があればそのまま使用し、
+        // なければHTTPステータスコードに応じた翻訳済みメッセージにフォールバックする
+        const serverErrorMessage: string | undefined =
+          typeof data?.error === 'string' && data.error.trim().length > 0 ? data.error : undefined
+
+        let errorContent = serverErrorMessage
+
+        if (!errorContent) {
+          switch (response.status) {
+            case 400:
+              errorContent = t('chatErrorUnprocessable')
+              break
+            case 401:
+              errorContent = t('chatErrorUnauthorized')
+              break
+            case 413:
+              errorContent = t('chatErrorTooLarge')
+              break
+            case 422:
+              errorContent = t('chatErrorUnprocessable')
+              break
+            case 500:
+              errorContent = t('chatErrorServerInternal')
+              break
+            case 502:
+              errorContent = t('chatErrorBadGateway')
+              break
+            case 503:
+              errorContent = t('chatErrorServiceUnavailable')
+              break
+            default:
+              errorContent = t('chatErrorUnknownPrefix')
+              break
+          }
+        }
+
+        const errorMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: errorContent,
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, errorMessage])
+        return
       }
     } catch (error) {
       // AbortErrorは無視
@@ -137,40 +180,8 @@ export function ChatDialog({ isOpen, onClose }: ChatDialogProps) {
 
       debugError('チャットエラー:', error)
 
-      // エラーの詳細情報を含むメッセージを作成
-      let errorContent = ''
-
-      if (error instanceof Error) {
-        // Groq公式ドキュメントに基づくエラーハンドリング
-        // https://console.groq.com/docs/errors
-
-        if (error.message.includes('429') || error.message.includes('Too Many Requests')) {
-          // レート制限の場合は、サーバーからの親切なメッセージをそのまま使用
-          errorContent = error.message
-        } else if (error.message.includes('498') || error.message.includes('Flex Tier Capacity Exceeded')) {
-          // Flex Tier容量超過の場合も、サーバーからのメッセージを使用
-          errorContent = error.message
-        } else if (error.message.includes('413') || error.message.includes('Request Entity Too Large')) {
-          errorContent = t('chatErrorTooLarge')
-        } else if (error.message.includes('422') || error.message.includes('Unprocessable Entity')) {
-          errorContent = t('chatErrorUnprocessable')
-        } else if (error.message.includes('fetch')) {
-          errorContent = t('chatErrorNetwork')
-        } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-          errorContent = t('chatErrorUnauthorized')
-        } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
-          errorContent = t('chatErrorServerInternal')
-        } else if (error.message.includes('502') || error.message.includes('Bad Gateway')) {
-          errorContent = t('chatErrorBadGateway')
-        } else if (error.message.includes('503') || error.message.includes('Service Unavailable')) {
-          errorContent = t('chatErrorServiceUnavailable')
-        } else {
-          // その他のエラーの場合は詳細情報を表示
-          errorContent = `${t('chatErrorUnknownPrefix')}\n\n${t('chatErrorNameLabel')}: ${error.name}\n${t('chatErrorMessageLabel')}: ${error.message}\n\n${t('chatErrorCheckConsole')}`
-        }
-      } else {
-        errorContent = `${t('chatErrorUnexpectedPrefix')}\n\n${t('chatErrorContentLabel')}: ${String(error)}`
-      }
+      // クライアント側の障害（fetch失敗・JSONパース失敗など）はネットワークエラーとして表示する
+      const errorContent = t('chatErrorNetwork')
 
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
