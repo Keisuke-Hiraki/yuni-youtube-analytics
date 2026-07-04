@@ -2,13 +2,8 @@
 
 import type React from "react"
 import { useState, useMemo, useEffect, useRef } from "react"
-import Image from "next/image"
-import { motion } from "framer-motion"
+import * as PopoverPrimitive from "@radix-ui/react-popover"
 import {
-  Eye,
-  ThumbsUp,
-  MessageSquare,
-  Clock,
   AlertCircle,
   Filter,
   X,
@@ -31,10 +26,10 @@ import {
 } from "@/components/ui/sheet"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { type YouTubeVideo, formatNumber, formatDate, formatDuration, getViewCountTag } from "@/lib/youtube"
+import { type YouTubeVideo } from "@/lib/youtube"
 import VideoDetailDialog from "./video-detail-dialog"
 import { NeonVideoCard } from "@/components/cards/neon-video-card"
-import { NeonText } from "@/components/neon/neon-text"
+import { VideoListItem } from "@/components/cards/video-list-item"
 import { useLanguage } from "@/lib/language-context"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
@@ -46,218 +41,19 @@ interface VideoRankingProps {
   initialVideos: YouTubeVideo[]
 }
 
-export default function VideoRanking({ initialVideos }: VideoRankingProps) {
-  const { t, language } = useLanguage()
-  const [videos] = useState<YouTubeVideo[]>(initialVideos || [])
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null)
-  const [yearFilter, setYearFilter] = useState<string>("all")
-  const [limitCount, setLimitCount] = useState<number>(100)
-  const [excludeShorts, setExcludeShorts] = useState<boolean>(false)
-  
-  // ソート機能のstate追加
-  const [sortField, setSortField] = useState<SortField>("default")
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc")
-  
-  const [activeFilters, setActiveFilters] = useState<number>(0)
-  const [clickedCardId, setClickedCardId] = useState<string | null>(null)
-  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+// 独立したソートコントロール（モジュールトップレベルに抽出し、親の再レンダリングごとに
+// 新しいコンポーネント型が生成されて Select 等が再マウントされる問題を回避する）
+interface SortControlsProps {
+  t: (key: string) => string
+  isMobile: boolean
+  sortField: SortField
+  setSortField: (field: SortField) => void
+  sortOrder: SortOrder
+  setSortOrder: (order: SortOrder) => void
+}
 
-  const [hoveredItemId, setHoveredItemId] = useState<string | null>(null)
-  const [hoveredPlayButtonId, setHoveredPlayButtonId] = useState<string | null>(null)
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-  // フィルターメニューの参照を作成
-  const filterMenuRef = useRef<HTMLDivElement>(null)
-  const filterButtonRef = useRef<HTMLButtonElement>(null)
-  const listContainerRef = useRef<HTMLDivElement>(null)
-
-  // モバイル判定
-  const isMobile = useMediaQuery("(max-width: 768px)")
-
-  // 外側クリックを検出するためのイベントリスナーを設定
-  useEffect(() => {
-    // フィルターが開いていない場合は何もしない
-    if (!filterSheetOpen || isMobile) return
-
-    // クリックイベントのハンドラー
-    const handleOutsideClick = (event: MouseEvent) => {
-      // フィルターメニューと開閉ボタンの参照が存在し、
-      // クリックがそれらの外側で発生した場合にフィルターを閉じる
-      if (
-        filterMenuRef.current &&
-        filterButtonRef.current &&
-        !filterMenuRef.current.contains(event.target as Node) &&
-        !filterButtonRef.current.contains(event.target as Node)
-      ) {
-        // セレクトボックスやその他のポップアップが開いていないことを確認
-        // document.activeElementがbodyの場合のみフィルターを閉じる
-        if (document.activeElement === document.body) {
-          setFilterSheetOpen(false)
-        }
-      }
-    }
-
-    // イベントリスナーを追加（mousedownではなくmouseupを使用）
-    document.addEventListener("mouseup", handleOutsideClick)
-
-    // クリーンアップ関数
-    return () => {
-      document.removeEventListener("mouseup", handleOutsideClick)
-    }
-  }, [filterSheetOpen, isMobile])
-
-
-
-  // コンポーネントのクリーンアップ時にタイムアウトをクリア
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  // 右クリックを防止する関数
-  const preventContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault()
-  }
-
-  // ソート関数の定義
-  const sortVideos = (videos: YouTubeVideo[], field: SortField, order: SortOrder): YouTubeVideo[] => {
-    if (field === "default") {
-      return videos // デフォルトの順序を保持
-    }
-
-    return [...videos].sort((a, b) => {
-      let valueA: number | string
-      let valueB: number | string
-
-      switch (field) {
-        case "viewCount":
-          valueA = a.viewCount || 0
-          valueB = b.viewCount || 0
-          break
-        case "likeCount":
-          valueA = a.likeCount || 0
-          valueB = b.likeCount || 0
-          break
-        case "commentCount":
-          valueA = a.commentCount || 0
-          valueB = b.commentCount || 0
-          break
-        case "publishedAt":
-          valueA = new Date(a.publishedAt).getTime()
-          valueB = new Date(b.publishedAt).getTime()
-          break
-        default:
-          return 0
-      }
-
-      if (order === "asc") {
-        return valueA < valueB ? -1 : valueA > valueB ? 1 : 0
-      } else {
-        return valueA > valueB ? -1 : valueA < valueB ? 1 : 0
-      }
-    })
-  }
-
-  // 利用可能な年のリストを取得
-  const availableYears = useMemo(() => {
-    if (!videos || !Array.isArray(videos) || videos.length === 0) {
-      return []
-    }
-    const years = new Set<string>()
-    videos.forEach((video) => {
-      if (video && video.publishedAt) {
-        try {
-          const year = new Date(video.publishedAt).getFullYear().toString()
-          years.add(year)
-        } catch (error) {
-          console.error('Invalid date format:', video.publishedAt, error)
-        }
-      }
-    })
-    return Array.from(years).sort((a, b) => Number.parseInt(b) - Number.parseInt(a)) // 降順でソート
-  }, [videos])
-
-  // フィルタリングされた動画（表示件数制限も適用）
-  const filteredVideos = useMemo(() => {
-    if (!videos || !Array.isArray(videos)) {
-      return []
-    }
-    let filtered = videos
-
-    // タイトル検索
-    if (searchQuery) {
-      filtered = filtered.filter((video) => video && video.title && video.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    }
-
-    // 年フィルター
-    if (yearFilter !== "all") {
-      filtered = filtered.filter((video) => {
-        if (!video || !video.publishedAt) return false
-        try {
-          const videoYear = new Date(video.publishedAt).getFullYear().toString()
-          return videoYear === yearFilter
-        } catch (error) {
-          console.error('Invalid date format during filtering:', video.publishedAt, error)
-          return false
-        }
-      })
-    }
-
-    // ショート動画除外フィルター
-    if (excludeShorts) {
-      filtered = filtered.filter((video) => video && !video.isShort)
-    }
-
-    // ソート適用
-    const sorted = sortVideos(filtered, sortField, sortOrder)
-
-    // 表示件数制限
-    return sorted.slice(0, limitCount)
-  }, [videos, searchQuery, yearFilter, excludeShorts, limitCount, sortField, sortOrder])
-
-  // アクティブなフィルター数を更新（ソート条件は除外）
-  useEffect(() => {
-    let count = 0
-    if (yearFilter !== "all") count++
-    if (limitCount !== 100) count++
-    if (searchQuery) count++
-    if (excludeShorts) count++
-    setActiveFilters(count)
-  }, [yearFilter, limitCount, searchQuery, excludeShorts])
-
-  const handleVideoClick = (video: YouTubeVideo) => {
-    // クリックアニメーションのためにIDを設定
-    setClickedCardId(video.id)
-
-    // アニメーション完了後にダイアログを表示
-    setTimeout(() => {
-      setSelectedVideo(video)
-      setClickedCardId(null)
-    }, 300)
-  }
-
-  const closeDialog = () => {
-    setSelectedVideo(null)
-  }
-
-  const resetFilters = () => {
-    setYearFilter("all")
-    setLimitCount(100)
-    setSearchQuery("")
-    setExcludeShorts(false)
-    // ソート条件はリセットしない
-    // モバイルの場合はシートを閉じる
-    if (isMobile) {
-      setFilterSheetOpen(false)
-    }
-  }
-
-  // 独立したソートコントロール
-  const SortControls = () => (
+function SortControls({ t, isMobile, sortField, setSortField, sortOrder, setSortOrder }: SortControlsProps) {
+  return (
     <div className="flex items-center gap-2">
       <Select value={sortField} onValueChange={(value: SortField) => setSortField(value)}>
         <SelectTrigger className={isMobile ? "w-full" : "w-48"}>
@@ -302,9 +98,31 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
       )}
     </div>
   )
+}
 
-  // フィルター設定UI
-  const FilterControls = () => (
+// フィルター設定UI（モジュールトップレベルに抽出）
+interface FilterControlsProps {
+  t: (key: string) => string
+  availableYears: string[]
+  yearFilter: string
+  setYearFilter: (year: string) => void
+  limitCount: number
+  setLimitCount: (count: number) => void
+  excludeShorts: boolean
+  setExcludeShorts: (exclude: boolean) => void
+}
+
+function FilterControls({
+  t,
+  availableYears,
+  yearFilter,
+  setYearFilter,
+  limitCount,
+  setLimitCount,
+  excludeShorts,
+  setExcludeShorts,
+}: FilterControlsProps) {
+  return (
     <div className="space-y-4">
       <div className="space-y-2">
         <h4 className="text-sm font-medium">{t("publishYear")}</h4>
@@ -371,6 +189,171 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
       </div>
     </div>
   )
+}
+
+export default function VideoRanking({ initialVideos }: VideoRankingProps) {
+  const { t, language } = useLanguage()
+  const [videos] = useState<YouTubeVideo[]>(initialVideos || [])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null)
+  const [yearFilter, setYearFilter] = useState<string>("all")
+  const [limitCount, setLimitCount] = useState<number>(100)
+  const [excludeShorts, setExcludeShorts] = useState<boolean>(false)
+
+  // ソート機能のstate追加
+  const [sortField, setSortField] = useState<SortField>("default")
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc")
+
+  const [activeFilters, setActiveFilters] = useState<number>(0)
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+
+  const [hoveredItemId, setHoveredItemId] = useState<string | null>(null)
+  const [hoveredPlayButtonId, setHoveredPlayButtonId] = useState<string | null>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const listContainerRef = useRef<HTMLDivElement>(null)
+
+  // モバイル判定
+  const isMobile = useMediaQuery("(max-width: 768px)")
+
+  // コンポーネントのクリーンアップ時にタイムアウトをクリア
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // ソート関数の定義
+  const sortVideos = (videos: YouTubeVideo[], field: SortField, order: SortOrder): YouTubeVideo[] => {
+    if (field === "default") {
+      return videos // デフォルトの順序を保持
+    }
+
+    return [...videos].sort((a, b) => {
+      let valueA: number | string
+      let valueB: number | string
+
+      switch (field) {
+        case "viewCount":
+          valueA = a.viewCount || 0
+          valueB = b.viewCount || 0
+          break
+        case "likeCount":
+          valueA = a.likeCount || 0
+          valueB = b.likeCount || 0
+          break
+        case "commentCount":
+          valueA = a.commentCount || 0
+          valueB = b.commentCount || 0
+          break
+        case "publishedAt":
+          valueA = new Date(a.publishedAt).getTime()
+          valueB = new Date(b.publishedAt).getTime()
+          break
+        default:
+          return 0
+      }
+
+      if (order === "asc") {
+        return valueA < valueB ? -1 : valueA > valueB ? 1 : 0
+      } else {
+        return valueA > valueB ? -1 : valueA < valueB ? 1 : 0
+      }
+    })
+  }
+
+  // 利用可能な年のリストを取得
+  const availableYears = useMemo(() => {
+    if (!videos || !Array.isArray(videos) || videos.length === 0) {
+      return []
+    }
+    const years = new Set<string>()
+    videos.forEach((video) => {
+      if (video && video.publishedAt) {
+        try {
+          const year = new Date(video.publishedAt).getFullYear().toString()
+          years.add(year)
+        } catch (error) {
+          console.error('Invalid date format:', video.publishedAt, error)
+        }
+      }
+    })
+    return Array.from(years).sort((a, b) => Number.parseInt(b) - Number.parseInt(a)) // 降順でソート
+  }, [videos])
+
+  // フィルタリング＋ソート済みの動画（表示件数制限を適用する前の全件）
+  // 表示件数のカウント表示にも再利用し、JSX内での二重フィルタ計算を避ける
+  const filteredAndSortedVideos = useMemo(() => {
+    if (!videos || !Array.isArray(videos)) {
+      return []
+    }
+    let filtered = videos
+
+    // タイトル検索
+    if (searchQuery) {
+      filtered = filtered.filter((video) => video && video.title && video.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    }
+
+    // 年フィルター
+    if (yearFilter !== "all") {
+      filtered = filtered.filter((video) => {
+        if (!video || !video.publishedAt) return false
+        try {
+          const videoYear = new Date(video.publishedAt).getFullYear().toString()
+          return videoYear === yearFilter
+        } catch (error) {
+          console.error('Invalid date format during filtering:', video.publishedAt, error)
+          return false
+        }
+      })
+    }
+
+    // ショート動画除外フィルター
+    if (excludeShorts) {
+      filtered = filtered.filter((video) => video && !video.isShort)
+    }
+
+    // ソート適用
+    return sortVideos(filtered, sortField, sortOrder)
+  }, [videos, searchQuery, yearFilter, excludeShorts, sortField, sortOrder])
+
+  // 表示件数制限を適用した最終的な動画リスト
+  const filteredVideos = useMemo(() => {
+    return filteredAndSortedVideos.slice(0, limitCount)
+  }, [filteredAndSortedVideos, limitCount])
+
+  // アクティブなフィルター数を更新（ソート条件は除外）
+  useEffect(() => {
+    let count = 0
+    if (yearFilter !== "all") count++
+    if (limitCount !== 100) count++
+    if (searchQuery) count++
+    if (excludeShorts) count++
+    setActiveFilters(count)
+  }, [yearFilter, limitCount, searchQuery, excludeShorts])
+
+  const handleVideoClick = (video: YouTubeVideo) => {
+    // ダイアログを即時表示（以前はクリックアニメーションのため300msの遅延があった）
+    setSelectedVideo(video)
+  }
+
+  const closeDialog = () => {
+    setSelectedVideo(null)
+  }
+
+  const resetFilters = () => {
+    setYearFilter("all")
+    setLimitCount(100)
+    setSearchQuery("")
+    setExcludeShorts(false)
+    // ソート条件はリセットしない
+    // モバイルの場合はシートを閉じる
+    if (isMobile) {
+      setFilterSheetOpen(false)
+    }
+  }
 
   if (videos.length === 0) {
     return (
@@ -413,7 +396,16 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                   <SheetDescription>{t("filterButton")}</SheetDescription>
                 </SheetHeader>
                 <div className="py-6">
-                  <FilterControls />
+                  <FilterControls
+                    t={t}
+                    availableYears={availableYears}
+                    yearFilter={yearFilter}
+                    setYearFilter={setYearFilter}
+                    limitCount={limitCount}
+                    setLimitCount={setLimitCount}
+                    excludeShorts={excludeShorts}
+                    setExcludeShorts={setExcludeShorts}
+                  />
                 </div>
                 <SheetFooter>
                   <Button variant="outline" onClick={resetFilters} className="w-full">
@@ -423,25 +415,26 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
               </SheetContent>
             </Sheet>
           ) : (
-            // デスクトップ向けのドロップダウンメニュー
-            <div className="relative">
-              <Button
-                ref={filterButtonRef}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setFilterSheetOpen(!filterSheetOpen)}
-              >
-                <Filter className="h-4 w-4" />
-                {t("filterButton")}
-                {activeFilters > 0 && (
-                  <Badge variant="secondary" className="ml-1">
-                    {activeFilters}
-                  </Badge>
-                )}
-              </Button>
-              {filterSheetOpen && (
-                <div ref={filterMenuRef} className="absolute z-50 mt-2 w-72 rounded-md shadow-lg bg-background border">
+            // デスクトップ向けの Popover（Radix ベース。以前の document.activeElement 依存の
+            // 脆弱な外側クリック検出を置き換え、フォーカス管理・Escape・外側クリックを標準委譲する）
+            <PopoverPrimitive.Root open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+              <PopoverPrimitive.Trigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  {t("filterButton")}
+                  {activeFilters > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {activeFilters}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverPrimitive.Trigger>
+              <PopoverPrimitive.Portal>
+                <PopoverPrimitive.Content
+                  align="start"
+                  sideOffset={8}
+                  className="z-50 w-72 rounded-md shadow-lg bg-background border data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                >
                   <div className="p-4 space-y-4">
                     <div className="flex justify-between items-center">
                       <h3 className="font-medium">{t("filterSettings")}</h3>
@@ -449,14 +442,23 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                    <FilterControls />
+                    <FilterControls
+                      t={t}
+                      availableYears={availableYears}
+                      yearFilter={yearFilter}
+                      setYearFilter={setYearFilter}
+                      limitCount={limitCount}
+                      setLimitCount={setLimitCount}
+                      excludeShorts={excludeShorts}
+                      setExcludeShorts={setExcludeShorts}
+                    />
                     <Button variant="outline" onClick={resetFilters} className="w-full">
                       {t("resetFilters")}
                     </Button>
                   </div>
-                </div>
-              )}
-            </div>
+                </PopoverPrimitive.Content>
+              </PopoverPrimitive.Portal>
+            </PopoverPrimitive.Root>
           )}
 
           {activeFilters > 0 && (
@@ -504,12 +506,19 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
             </div>
           )}
         </div>
-        
+
         {/* 右側にソートコントロールを配置 */}
         {!isMobile && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">{t("sortBy")}:</span>
-            <SortControls />
+            <SortControls
+              t={t}
+              isMobile={isMobile}
+              sortField={sortField}
+              setSortField={setSortField}
+              sortOrder={sortOrder}
+              setSortOrder={setSortOrder}
+            />
           </div>
         )}
       </div>
@@ -518,34 +527,21 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
       {isMobile && (
         <div className="flex flex-col gap-2">
           <span className="text-sm text-muted-foreground">{t("sortBy")}:</span>
-          <SortControls />
+          <SortControls
+            t={t}
+            isMobile={isMobile}
+            sortField={sortField}
+            setSortField={setSortField}
+            sortOrder={sortOrder}
+            setSortOrder={setSortOrder}
+          />
         </div>
       )}
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {videos && Array.isArray(videos) ? videos.filter(video => {
-            if (!video) return false
-            // フィルタリング条件を再適用（表示件数制限前の数を取得）
-            let filtered = true
-            if (searchQuery) {
-              filtered = filtered && !!(video.title && video.title.toLowerCase().includes(searchQuery.toLowerCase()))
-            }
-            if (yearFilter !== "all") {
-              if (!video.publishedAt) return false
-              try {
-                const videoYear = new Date(video.publishedAt).getFullYear().toString()
-                filtered = filtered && videoYear === yearFilter
-              } catch {
-                return false
-              }
-            }
-            if (excludeShorts) {
-              filtered = filtered && !video.isShort
-            }
-            return filtered
-          }).length : 0}
-          {t("displayingVideos")} {filteredVideos && filteredVideos.length ? Math.min(filteredVideos.length, limitCount) : 0}
+          {filteredAndSortedVideos.length}
+          {t("displayingVideos")} {filteredVideos.length}
           {t("displaying")}
         </p>
       </div>
@@ -578,7 +574,7 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
             <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8'}`}>
               {filteredVideos && Array.isArray(filteredVideos) ? filteredVideos.map((video, index) => {
                 if (!video || !video.id) return null
-                
+
                 // YouTubeVideoをNeonVideoCardが期待する形式に変換
                 const neonVideo = {
                   id: video.id,
@@ -606,65 +602,23 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
           </TabsContent>
 
           <TabsContent value="list" className="w-full">
-            <div 
+            <div
               ref={listContainerRef}
               className={`space-y-2 sm:space-y-3 md:space-y-4 w-full ${isMobile ? 'px-1' : 'px-2'}`}
             >
               {filteredVideos && Array.isArray(filteredVideos) ? filteredVideos.map((video, index) => {
                 if (!video || !video.id) return null
-                
-                const viewCountTag = getViewCountTag(video.viewCount || 0)
-                const neonColors = ['pink', 'cyan', 'green', 'purple', 'orange'] as const
-                const color = neonColors[index % neonColors.length]
-                const isHovered = hoveredItemId === video.id
-                const isPlayButtonHovered = hoveredPlayButtonId === video.id
-                
-                const glowClasses = {
-                  pink: 'neon-glow-pink',
-                  cyan: 'neon-glow-cyan',
-                  green: 'neon-glow-green',
-                  purple: 'neon-glow-purple',
-                  orange: 'shadow-lg shadow-neon-orange/20'
-                }
-
-                const borderClasses = {
-                  pink: 'border-neon-pink',
-                  cyan: 'border-neon-cyan',
-                  green: 'border-neon-green',
-                  purple: 'border-neon-purple',
-                  orange: 'border-neon-orange'
-                }
-
-                const bgClasses = {
-                  pink: 'bg-neon-pink',
-                  cyan: 'bg-neon-cyan',
-                  green: 'bg-neon-green',
-                  purple: 'bg-neon-purple',
-                  orange: 'bg-neon-orange'
-                }
 
                 return (
-                  <motion.div
+                  <VideoListItem
                     key={video.id}
-                    initial={{ opacity: 0, x: isMobile ? 0 : -50 }}
-                    animate={{ 
-                      opacity: 1, 
-                      x: 0,
-                      scale: isHovered ? 1.02 : 1,
-                      y: isHovered ? -4 : 0
-                    }}
-                    transition={{ 
-                      delay: isMobile ? 0 : index * 0.05,
-                      scale: { duration: 0.3, ease: "easeOut" },
-                      y: { duration: 0.3, ease: "easeOut" },
-                      opacity: { duration: 0.2 },
-                      x: { duration: 0.4, ease: "easeOut" }
-                    }}
-                    className={`relative w-full flex gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 md:p-4 border-2 ${borderClasses[color]} ${isHovered ? glowClasses[color] : ''} rounded-lg cursor-pointer transition-all duration-300 ease-out bg-vinyl-black/80 backdrop-blur-sm active:scale-98 ${
-                      clickedCardId === video.id ? "click-animation" : ""
-                    } ${isHovered ? 'shadow-2xl' : 'shadow-lg'} hover:border-opacity-100 ${isMobile ? 'mx-0' : 'mx-1'}`}
+                    video={video}
+                    index={index}
+                    isMobile={isMobile}
+                    language={language}
+                    isHovered={hoveredItemId === video.id}
+                    isPlayButtonHovered={hoveredPlayButtonId === video.id}
                     onClick={() => handleVideoClick(video)}
-                    onContextMenu={preventContextMenu}
                     onMouseEnter={() => {
                       // 既存のタイムアウトをクリア
                       if (hoverTimeoutRef.current) {
@@ -679,131 +633,18 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
                         setHoveredPlayButtonId(null)
                       }, 100)
                     }}
-                  >
-                    {/* グロー効果 */}
-                    <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-${color}/10 to-transparent rounded-lg transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-50'}`} />
-                    
-                    <div className={`relative flex-shrink-0 ${isMobile ? 'w-[35%] max-w-[120px]' : 'w-[30%] sm:w-[25%] max-w-[200px]'} z-10`}>
-                      <div className="aspect-video w-full overflow-hidden rounded-md relative">
-                        <Image
-                          src={video.thumbnailUrl || "/placeholder.svg?height=90&width=160"}
-                          alt={video.title}
-                          width={160}
-                          height={90}
-                          className="w-full h-full object-cover select-none rounded-md transition-transform duration-300"
-                          onContextMenu={preventContextMenu}
-                          draggable={false}
-                        />
-                        {/* 再生ボタンオーバーレイ */}
-                        <div 
-                          className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
-                        >
-                          <motion.div
-                            animate={{
-                              scale: isPlayButtonHovered ? 1.2 : 1
-                            }}
-                            transition={{ duration: 0.2, ease: "easeInOut" }}
-                            whileTap={{ 
-                              scale: 0.9,
-                              rotate: isMobile ? 0 : 360,
-                              transition: { 
-                                duration: isMobile ? 0.2 : 0.8,
-                                ease: [0.4, 0, 0.2, 1],
-                                type: "tween"
-                              }
-                            }}
-                            className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10 sm:w-12 sm:h-12'} rounded-full ${bgClasses[color]} flex items-center justify-center ${glowClasses[color]} relative overflow-hidden`}
-                            onMouseEnter={() => {
-                              // 既存のタイムアウトをクリア
-                              if (hoverTimeoutRef.current) {
-                                clearTimeout(hoverTimeoutRef.current)
-                              }
-                              setHoveredPlayButtonId(video.id)
-                            }}
-                            onMouseLeave={() => {
-                              // 再生ボタンから離れた時は即座にクリア
-                              setHoveredPlayButtonId(null)
-                            }}
-                          >
-                            <motion.div
-                              initial={{ scale: 1 }}
-                              whileTap={{ 
-                                scale: [1, 1.5, 1],
-                                opacity: [1, 0.7, 1]
-                              }}
-                              transition={{ duration: isMobile ? 0.2 : 0.8 }}
-                              className="absolute inset-0 rounded-full bg-white/20"
-                            />
-                            <span className={`text-black ${isMobile ? 'text-xs' : 'text-sm sm:text-lg'} ml-0.5 relative z-10`}>▶</span>
-                          </motion.div>
-                        </div>
-                        
-                        {/* 動画情報オーバーレイ（モバイル最適化） */}
-                        <div className={`absolute bottom-1 right-1 bg-black/80 text-white ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-1 py-0.5'} rounded`}>
-                          {formatDuration(video.duration)}
-                        </div>
-                        <div className={`absolute top-1 left-1 bg-black/80 text-white ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-1'} rounded-full`}>
-                          #{index + 1}
-                        </div>
-                        {video.isShort && (
-                          <div className={`absolute top-1 right-1 bg-red-500 text-white ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-0.5'} rounded-full`}>
-                            #shorts
-                          </div>
-                        )}
-                        {viewCountTag && (
-                          <div
-                            className={`absolute bottom-1 left-1 ${viewCountTag.color} text-xs px-2 py-0.5 rounded-full font-medium shadow-md`}
-                            style={{
-                              backgroundColor: viewCountTag.label.includes("100M")
-                                ? "#22d3ee"
-                                : viewCountTag.label.includes("10M")
-                                  ? "#facc15"
-                                  : viewCountTag.label.includes("1M")
-                                    ? "#d1d5db"
-                                    : "#d97706",
-                              color:
-                                viewCountTag.label.includes("100M") ||
-                                viewCountTag.label.includes("10M") ||
-                                viewCountTag.label.includes("1M")
-                                  ? "#1e293b"
-                                  : "#ffffff",
-                            }}
-                          >
-                            {viewCountTag.label}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className={`flex-grow min-w-0 overflow-hidden relative z-10 ${isMobile ? 'w-[65%]' : 'w-[70%] sm:w-[75%]'}`}>
-                      <NeonText 
-                        size="sm" 
-                        color={color} 
-                        className={`${isMobile ? 'line-clamp-2 text-left mb-1 text-sm' : 'line-clamp-2 text-left mb-2 sm:mb-3'}`} 
-                        animate={false}
-                      >
-                        {video.title}
-                      </NeonText>
-                      <div className={`grid ${isMobile ? 'grid-cols-2 gap-y-1' : 'grid-cols-2 sm:grid-cols-3 gap-y-1 sm:gap-y-2'} ${isMobile ? 'text-xs' : 'text-xs sm:text-sm'} text-muted-foreground`}>
-                        <div className="flex items-center gap-1">
-                          <Eye className={`${isMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} flex-shrink-0`} />
-                          <span className="truncate">{formatNumber(video.viewCount)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <ThumbsUp className={`${isMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} flex-shrink-0`} />
-                          <span className="truncate">{formatNumber(video.likeCount)}</span>
-                        </div>
-                        <div className={`flex items-center gap-1 ${isMobile ? 'col-span-2' : 'col-span-2 sm:col-span-1'}`}>
-                          <MessageSquare className={`${isMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} flex-shrink-0`} />
-                          <span className="truncate">{formatNumber(video.commentCount)}</span>
-                        </div>
-                        <div className={`flex items-center gap-1 ${isMobile ? 'col-span-2 mt-0.5' : 'col-span-2 sm:col-span-3 mt-1'}`}>
-                          <Clock className={`${isMobile ? 'w-3 h-3' : 'w-3 h-3 sm:w-4 sm:h-4'} flex-shrink-0`} />
-                          <span className="truncate">{formatDate(video.publishedAt, language)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
+                    onPlayButtonMouseEnter={() => {
+                      // 既存のタイムアウトをクリア
+                      if (hoverTimeoutRef.current) {
+                        clearTimeout(hoverTimeoutRef.current)
+                      }
+                      setHoveredPlayButtonId(video.id)
+                    }}
+                    onPlayButtonMouseLeave={() => {
+                      // 再生ボタンから離れた時は即座にクリア
+                      setHoveredPlayButtonId(null)
+                    }}
+                  />
                 )
               }).filter(Boolean) : null}
             </div>
@@ -815,5 +656,3 @@ export default function VideoRanking({ initialVideos }: VideoRankingProps) {
     </div>
   )
 }
-
-
