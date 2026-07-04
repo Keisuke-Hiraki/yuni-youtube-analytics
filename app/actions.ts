@@ -33,13 +33,9 @@ const CACHE_DURATION = 60 * 60 * 1000 // 1時間（ミリ秒）
 // チャンネル情報を取得する関数
 export async function getChannelInfo(): Promise<ChannelInfo | null> {
   try {
-    // キャッシュを無効化するためのタイムスタンプパラメータを追加
-    const timestamp = Date.now()
-
     // 明示的にstatisticsパートを指定して、必要なデータを確実に取得
     const response = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id=${CHANNEL_ID}&key=${process.env.YOUTUBE_API_KEY}&_t=${timestamp}`,
-      { cache: "no-store" }, // キャッシュを完全に無効化
+      `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id=${CHANNEL_ID}&key=${process.env.YOUTUBE_API_KEY}`,
     )
 
     if (!response.ok) {

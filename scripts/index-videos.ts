@@ -20,11 +20,16 @@ async function main() {
       totalVectors: status.totalVectors
     })
     
-    // 動画データを取得
+    // 動画データを取得（取得失敗時はgetChannelVideosが例外をthrowする）
     console.log('📹 動画データを取得中...')
     const videos = await getChannelVideos(YUNI_CHANNEL_ID, 500) // 最大500件
+
+    if (videos.length === 0) {
+      console.error('❌ 動画データが0件です。処理を中断します。')
+      process.exit(1)
+    }
     console.log(`✅ ${videos.length}件の動画データを取得しました`)
-    
+
     // 強制更新フラグを設定
     process.env.FORCE_UPDATE = 'true'
     
@@ -42,7 +47,7 @@ async function main() {
       totalVectors: updatedStatus.totalVectors
     })
     
-    // 詳細統計を表示
+    // 詳細統計を表示（videos.length は上でチェック済みのため0除算にならない）
     if (updatedStatus.totalVectors > 0) {
       console.log('\n📈 インデックス詳細:')
       console.log(`  - 総ベクトル数: ${updatedStatus.totalVectors}`)
