@@ -122,13 +122,13 @@ async function updateTimestamp(): Promise<void> {
 }
 
 // 更新が必要かどうかを判定
-async function shouldUpdate(): Promise<boolean> {
+async function shouldUpdate(force = false): Promise<boolean> {
   // 強制更新フラグがある場合は常に更新
-  if (process.env.FORCE_UPDATE === 'true') {
+  if (force) {
     debugLog('強制更新フラグが設定されているため更新を実行します')
     return true
   }
-  
+
   const lastUpdate = await getLastUpdateTime()
   
   if (!lastUpdate) {
@@ -149,17 +149,17 @@ async function shouldUpdate(): Promise<boolean> {
 }
 
 // 動画データをVector DBにインデックス（修正版）
-export async function indexVideos(videos: YouTubeVideo[]): Promise<void> {
+export async function indexVideos(videos: YouTubeVideo[], options?: { force?: boolean }): Promise<void> {
   try {
     if (!vectorIndex || !genAI) {
       debugLog('Vector DBまたはGemini APIが初期化されていないため、インデックスをスキップします')
       return
     }
-    
+
     debugLog('Vector DB更新チェック開始')
-    
+
     // 更新が必要かチェック
-    if (!(await shouldUpdate())) {
+    if (!(await shouldUpdate(options?.force))) {
       debugLog('更新間隔内のためスキップします')
       return
     }

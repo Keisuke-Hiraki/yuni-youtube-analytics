@@ -30,12 +30,9 @@ async function main() {
     }
     console.log(`✅ ${videos.length}件の動画データを取得しました`)
 
-    // 強制更新フラグを設定
-    process.env.FORCE_UPDATE = 'true'
-    
-    // インデックス処理を実行
+    // インデックス処理を実行（強制更新）
     console.log('🔄 Vector DBにインデックス中...')
-    await indexVideos(videos)
+    await indexVideos(videos, { force: true })
     console.log('✅ インデックス処理が完了しました')
     
     // 更新後の状態を確認

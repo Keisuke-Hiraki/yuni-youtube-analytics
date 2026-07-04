@@ -1,28 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getIndexStatus } from '@/lib/vector-db'
 import { debugLog, debugError } from '@/lib/utils'
+import { requireAdminAuth } from '@/lib/api-auth'
 
 export async function GET(request: NextRequest) {
   try {
     // 管理者認証
-    const authHeader = request.headers.get('authorization')
-    const adminKey = process.env.ADMIN_API_KEY
-    
-    if (!adminKey || !authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: '認証が必要です' },
-        { status: 401 }
-      )
+    const authError = requireAdminAuth(request)
+    if (authError) {
+      return authError
     }
-    
-    const token = authHeader.substring(7)
-    if (token !== adminKey) {
-      return NextResponse.json(
-        { error: '認証に失敗しました' },
-        { status: 403 }
-      )
-    }
-    
+
     debugLog('インデックス状態確認開始')
     
     // インデックス状態を取得
@@ -43,10 +31,7 @@ export async function GET(request: NextRequest) {
     debugError('インデックス状態確認エラー:', error)
     
     return NextResponse.json(
-      { 
-        error: 'インデックス状態の確認に失敗しました',
-        details: error instanceof Error ? error.message : String(error)
-      },
+      { error: 'インデックス状態の確認に失敗しました' },
       { status: 500 }
     )
   }
