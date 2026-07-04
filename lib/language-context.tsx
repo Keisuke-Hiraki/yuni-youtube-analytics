@@ -79,6 +79,16 @@ export const translations: Translations = {
     sortOrderDesc: "降順",
     defaultSort: "デフォルト",
     resetSort: "ソートをリセット",
+    // ビュー切り替え関連
+    grid: "グリッド",
+    list: "リスト",
+    play: "再生",
+    // 言語切り替え関連
+    switchLanguage: "言語を切り替える",
+    // 404ページ関連
+    notFoundTitle: "ページが見つかりません",
+    notFoundDescription: "お探しのページは存在しないか、移動した可能性があります。",
+    backToHome: "トップページに戻る",
     // チャットボット関連
     chatTitle: "YuNi動画アシスタント",
     chatOpenLabel: "チャットボットを開く",
@@ -165,6 +175,16 @@ export const translations: Translations = {
     sortOrderDesc: "Descending",
     defaultSort: "Default",
     resetSort: "Reset Sort",
+    // View switching related
+    grid: "Grid",
+    list: "List",
+    play: "Play",
+    // Language switching related
+    switchLanguage: "Switch language",
+    // 404 page related
+    notFoundTitle: "Page Not Found",
+    notFoundDescription: "The page you are looking for does not exist or has been moved.",
+    backToHome: "Back to Home",
     // Chatbot related
     chatTitle: "YuNi Video Assistant",
     chatOpenLabel: "Open chatbot",
@@ -251,6 +271,16 @@ export const translations: Translations = {
     sortOrderDesc: "降序",
     defaultSort: "默认",
     resetSort: "重置排序",
+    // 视图切换相关
+    grid: "网格",
+    list: "列表",
+    play: "播放",
+    // 语言切换相关
+    switchLanguage: "切换语言",
+    // 404页面相关
+    notFoundTitle: "页面未找到",
+    notFoundDescription: "您要查找的页面不存在或已被移动。",
+    backToHome: "返回主页",
     // 聊天机器人相关
     chatTitle: "YuNi 视频助手",
     chatOpenLabel: "打开聊天机器人",
@@ -337,6 +367,16 @@ export const translations: Translations = {
     sortOrderDesc: "내림차순",
     defaultSort: "기본값",
     resetSort: "정렬 초기화",
+    // 뷰 전환 관련
+    grid: "그리드",
+    list: "목록",
+    play: "재생",
+    // 언어 전환 관련
+    switchLanguage: "언어 변경",
+    // 404 페이지 관련
+    notFoundTitle: "페이지를 찾을 수 없습니다",
+    notFoundDescription: "찾고 있는 페이지가 존재하지 않거나 이동되었을 수 있습니다.",
+    backToHome: "홈으로 돌아가기",
     // 챗봇 관련
     chatTitle: "YuNi 동영상 어시스턴트",
     chatOpenLabel: "챗봇 열기",
@@ -384,9 +424,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // 言語設定が変更されたらローカルストレージに保存
+  // 言語設定が変更されたらローカルストレージに保存し、document.documentElement.lang を更新
   useEffect(() => {
     localStorage.setItem("language", language)
+    document.documentElement.lang = language
   }, [language])
 
   // 翻訳関数

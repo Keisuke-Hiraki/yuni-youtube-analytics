@@ -22,31 +22,57 @@ export function SiteDescription({ totalCount, lastUpdated, channelInfo }: SiteDe
       
       <div className="relative z-10">
 
-        {channelInfo && (
-          <div className="flex flex-wrap justify-center gap-6 mt-8 mb-6">
-            <div className="flex items-center gap-3 bg-vinyl-black/60 border border-neon-pink/30 px-4 py-3 rounded-xl backdrop-blur-sm neon-glow-pink">
-              <Users className="w-5 h-5 text-neon-pink" />
-              <div className="text-left">
-                <div className="font-bold text-neon-pink text-lg">{formatLargeNumber(channelInfo.subscriberCount, language)}</div>
-                <div className="text-xs text-gray-400">{t("subscribers")}</div>
+        <div className="flex flex-wrap justify-center gap-6 mt-8 mb-6 min-h-[120px]">
+          {channelInfo ? (
+            <>
+              <div className="flex items-center gap-3 bg-vinyl-black/60 border border-neon-pink/30 px-4 py-3 rounded-xl backdrop-blur-sm neon-glow-pink">
+                <Users className="w-5 h-5 text-neon-pink" />
+                <div className="text-left">
+                  <div className="font-bold text-neon-pink text-lg">{formatLargeNumber(channelInfo.subscriberCount, language)}</div>
+                  <div className="text-xs text-gray-300">{t("subscribers")}</div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3 bg-vinyl-black/60 border border-neon-cyan/30 px-4 py-3 rounded-xl backdrop-blur-sm neon-glow-cyan">
-              <Eye className="w-5 h-5 text-neon-cyan" />
-              <div className="text-left">
-                <div className="font-bold text-neon-cyan text-lg">{formatLargeNumber(channelInfo.viewCount, language)}</div>
-                <div className="text-xs text-gray-400">{t("totalViews")}</div>
+              <div className="flex items-center gap-3 bg-vinyl-black/60 border border-neon-cyan/30 px-4 py-3 rounded-xl backdrop-blur-sm neon-glow-cyan">
+                <Eye className="w-5 h-5 text-neon-cyan" />
+                <div className="text-left">
+                  <div className="font-bold text-neon-cyan text-lg">{formatLargeNumber(channelInfo.viewCount, language)}</div>
+                  <div className="text-xs text-gray-300">{t("totalViews")}</div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3 bg-vinyl-black/60 border border-neon-green/30 px-4 py-3 rounded-xl backdrop-blur-sm neon-glow-green">
-              <Video className="w-5 h-5 text-neon-green" />
-              <div className="text-left">
-                <div className="font-bold text-neon-green text-lg">{formatLargeNumber(channelInfo.videoCount, language)}</div>
-                <div className="text-xs text-gray-400">{t("totalVideos")}</div>
+              <div className="flex items-center gap-3 bg-vinyl-black/60 border border-neon-green/30 px-4 py-3 rounded-xl backdrop-blur-sm neon-glow-green">
+                <Video className="w-5 h-5 text-neon-green" />
+                <div className="text-left">
+                  <div className="font-bold text-neon-green text-lg">{formatLargeNumber(channelInfo.videoCount, language)}</div>
+                  <div className="text-xs text-gray-300">{t("totalVideos")}</div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 bg-vinyl-black/60 border border-neon-pink/30 px-4 py-3 rounded-xl backdrop-blur-sm neon-glow-pink">
+                <Users className="w-5 h-5 text-neon-pink" />
+                <div className="text-left">
+                  <div className="font-bold text-neon-pink text-lg h-6 w-20 bg-neon-pink/20 rounded animate-pulse" />
+                  <div className="text-xs text-gray-300 h-4 w-24 bg-gray-600/20 rounded animate-pulse mt-1" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-vinyl-black/60 border border-neon-cyan/30 px-4 py-3 rounded-xl backdrop-blur-sm neon-glow-cyan">
+                <Eye className="w-5 h-5 text-neon-cyan" />
+                <div className="text-left">
+                  <div className="font-bold text-neon-cyan text-lg h-6 w-20 bg-neon-cyan/20 rounded animate-pulse" />
+                  <div className="text-xs text-gray-300 h-4 w-24 bg-gray-600/20 rounded animate-pulse mt-1" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-vinyl-black/60 border border-neon-green/30 px-4 py-3 rounded-xl backdrop-blur-sm neon-glow-green">
+                <Video className="w-5 h-5 text-neon-green" />
+                <div className="text-left">
+                  <div className="font-bold text-neon-green text-lg h-6 w-20 bg-neon-green/20 rounded animate-pulse" />
+                  <div className="text-xs text-gray-300 h-4 w-24 bg-gray-600/20 rounded animate-pulse mt-1" />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mt-6">
           {totalCount > 0 && (
@@ -57,7 +83,7 @@ export function SiteDescription({ totalCount, lastUpdated, channelInfo }: SiteDe
           )}
           {lastUpdated && (
             <div className="flex flex-col items-center sm:flex-row sm:items-center gap-3">
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-gray-300">
                 {t("lastUpdated")}:{" "}
                 <span className="text-neon-orange">
                   {new Date(lastUpdated).toLocaleString(
