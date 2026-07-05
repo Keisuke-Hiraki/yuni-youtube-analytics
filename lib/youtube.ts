@@ -120,7 +120,25 @@ function parseDurationSeconds(duration: string): number | null {
   return hours * 3600 + minutes * 60 + seconds
 }
 
-export async function getChannelVideos(channelId: string, maxResults = 200): Promise<YouTubeVideo[]> {
+// Reads the optional MAX_VIDEO_RESULTS environment variable that caps how many
+// videos getChannelVideos() will fetch. Shared between app/actions.ts and
+// scripts/index-videos.ts: it lives here (rather than in app/actions.ts,
+// which has a top-level "use server" directive) so that the standalone tsx
+// script can import it without pulling in Next.js server-action bundling
+// semantics.
+// Returns undefined when unset, non-numeric, or <= 0, which getChannelVideos()
+// treats as "no cap: fetch every video".
+export function getMaxVideoResults(): number | undefined {
+  const raw = process.env.MAX_VIDEO_RESULTS
+  if (!raw) return undefined
+
+  const parsed = Number.parseInt(raw, 10)
+  if (Number.isNaN(parsed) || parsed <= 0) return undefined
+
+  return parsed
+}
+
+export async function getChannelVideos(channelId: string, maxResults?: number): Promise<YouTubeVideo[]> {
   try {
     // チャンネルのアップロード済みプレイリストIDを取得
     const channelResponse = await fetch(
@@ -144,9 +162,13 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
     let nextPageToken: string | null = null
     let totalFetched = 0
 
-    // ページネーションを使用して全ての動画を取得（最大maxResults件まで）
+    // ページネーションを使用して全ての動画を取得
+    // maxResults が undefined の場合は上限なし（nextPageToken が尽きるまで全件取得）
     do {
-      const pageSize = Math.min(50, maxResults - totalFetched) // 1回のリクエストで最大50件
+      // Page size stays at the API's per-request max (50) when there is no cap;
+      // when capped, shrink the last page so we don't over-fetch past maxResults.
+      const remaining = maxResults === undefined ? undefined : maxResults - totalFetched
+      const pageSize = remaining === undefined ? 50 : Math.min(50, remaining)
       const pageUrl: string = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=${pageSize}&playlistId=${uploadsPlaylistId}&key=${process.env.YOUTUBE_API_KEY}${nextPageToken ? `&pageToken=${nextPageToken}` : ""}`
 
       const playlistResponse: Response = await fetch(pageUrl)
@@ -165,8 +187,8 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
       totalFetched += playlistData.items.length
       nextPageToken = playlistData.nextPageToken || null
 
-      // 最大件数に達したら終了
-      if (totalFetched >= maxResults) {
+      // 最大件数に達したら終了（上限指定時のみ）
+      if (maxResults !== undefined && totalFetched >= maxResults) {
         break
       }
     } while (nextPageToken)
