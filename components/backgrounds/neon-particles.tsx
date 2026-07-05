@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { Renderer, Camera, Geometry, Program, Mesh } from "ogl";
+import { debugError } from "@/lib/utils";
 
 interface ParticlesProps {
   particleCount?: number;
@@ -114,17 +115,30 @@ const Particles: React.FC<ParticlesProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    // Check if prefers-reduced-motion is set - do not start animation if true
+    // Check if prefers-reduced-motion is set - if so, render a static starfield
+    // instead of a fully animated one (autonomous motion is frozen further below,
+    // but mouse-follow interaction and rendering still happen).
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) {
+
+    let renderer: Renderer;
+    let gl: Renderer["gl"];
+    try {
+      // WebGL context creation can throw or fail to attach a valid renderer
+      // (e.g. GPU acceleration disabled, remote desktop, headless browsers).
+      // This component is purely decorative, so any failure here must not
+      // propagate and take down the rest of the React tree.
+      renderer = new Renderer({ depth: false, alpha: true });
+      gl = renderer.gl;
+      if (!gl) {
+        throw new Error("WebGL context is unavailable");
+      }
+      gl.canvas.setAttribute('aria-hidden', 'true');
+      container.appendChild(gl.canvas);
+      gl.clearColor(0, 0, 0, 0);
+    } catch (error) {
+      debugError('WebGL unavailable, skipping particle background:', error);
       return;
     }
-
-    const renderer = new Renderer({ depth: false, alpha: true });
-    const gl = renderer.gl;
-    gl.canvas.setAttribute('aria-hidden', 'true');
-    container.appendChild(gl.canvas);
-    gl.clearColor(0, 0, 0, 0);
 
     const camera = new Camera(gl, { fov: 15 });
     camera.position.set(0, 0, cameraDistance);
@@ -208,7 +222,12 @@ const Particles: React.FC<ParticlesProps> = ({
       }
 
       lastTime = t;
-      elapsed += delta * speed;
+
+      // Under reduced motion, freeze autonomous animation (time stays at 0 and
+      // rotation is skipped) while still rendering a static frame each tick.
+      if (!prefersReducedMotion) {
+        elapsed += delta * speed;
+      }
 
       program.uniforms.uTime.value = elapsed * 0.001;
 
@@ -220,7 +239,7 @@ const Particles: React.FC<ParticlesProps> = ({
         particles.position.y = 0;
       }
 
-      if (!disableRotation) {
+      if (!prefersReducedMotion && !disableRotation) {
         particles.rotation.x = Math.sin(elapsed * 0.0002) * 0.1;
         particles.rotation.y = Math.cos(elapsed * 0.0005) * 0.15;
         particles.rotation.z += 0.01 * speed;
