@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Globe } from "lucide-react"
 
 export function LanguageSwitcher() {
-  const { language, setLanguage } = useLanguage()
+  const { language, setLanguage, t } = useLanguage()
 
   return (
     <DropdownMenu>
@@ -17,7 +17,7 @@ export function LanguageSwitcher() {
           className="transition-all duration-300 hover:text-primary hover:scale-105 text-white"
         >
           <Globe className="h-[1.2rem] w-[1.2rem]" />
-          <span className="sr-only">言語を切り替える</span>
+          <span className="sr-only">{t("switchLanguage")}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

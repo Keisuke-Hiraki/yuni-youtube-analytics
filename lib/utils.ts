@@ -9,19 +9,19 @@ export function cn(...inputs: ClassValue[]) {
 export const isDevelopment = process.env.NODE_ENV === 'development'
 export const isDebugMode = process.env.DEBUG_MODE === 'true' || isDevelopment
 
-export const debugLog = (...args: any[]) => {
+export const debugLog = (...args: unknown[]) => {
   if (isDebugMode) {
     console.log(...args)
   }
 }
 
-export const debugError = (...args: any[]) => {
+export const debugError = (...args: unknown[]) => {
   if (isDebugMode) {
     console.error(...args)
   }
 }
 
-export const debugWarn = (...args: any[]) => {
+export const debugWarn = (...args: unknown[]) => {
   if (isDebugMode) {
     console.warn(...args)
   }

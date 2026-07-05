@@ -54,64 +54,77 @@ export function getViewCountTag(viewCount: number): ViewCountTag | null {
 
 import { debugLog, debugError } from '@/lib/utils'
 
-/**
- * YouTube動画がShort動画か通常動画かを判定する
- * 新しい仕様: shortsURLにアクセスしてリダイレクトされない場合はショート動画
- * @param {string} videoId - 判定対象の動画ID
- * @returns {Promise<boolean>} - Short動画の場合はtrue、それ以外はfalse
- */
-async function isYouTubeShort(videoId: string): Promise<boolean> {
-  try {
-    // ショート動画の場合、shortsページにアクセスしてもリダイレクトされない
-    // 通常動画の場合、shortsページにアクセスすると通常のwatchページにリダイレクトされる
-    const response = await fetch(`https://www.youtube.com/shorts/${videoId}`, {
-      method: "HEAD",
-      redirect: "manual", // リダイレクトを手動で処理
-    })
-
-    // リダイレクト先のURLを確認
-    const location = response.headers.get("location")
-    
-    // リダイレクトされた場合（通常動画）
-    if (location && (location.includes("/watch?v=") || location.includes("/watch/"))) {
-      return false
+// YouTube Data API v3 レスポンスの型定義（本アプリで使用するフィールドのみ）
+interface YouTubePlaylistItemResource {
+  snippet?: {
+    resourceId?: {
+      videoId?: string
     }
-
-    // リダイレクトされなかった場合（ショート動画）
-    // ステータスコードが200番台の場合はショート動画として扱う
-    if (response.status >= 200 && response.status < 400) {
-      return true
-    }
-
-    return false
-  } catch (error) {
-    debugError("⛔️ isShort関数内でエラーが発生:", error)
-    return false
   }
 }
 
-// 複数の動画IDに対してショート動画かどうかを一括チェックする関数
-async function checkMultipleShorts(videoIds: string[]): Promise<Record<string, boolean>> {
-  const results: Record<string, boolean> = {}
+interface YouTubePlaylistItemsResponse {
+  items?: YouTubePlaylistItemResource[]
+  nextPageToken?: string
+}
 
-  // 並列処理で効率化
-  const promises = videoIds.map(async (id) => {
-    results[id] = await isYouTubeShort(id)
-  })
+interface YouTubeVideoThumbnail {
+  url: string
+}
 
-  await Promise.all(promises)
-  return results
+interface YouTubeVideoItem {
+  id: string
+  snippet: {
+    title: string
+    description: string
+    publishedAt: string
+    thumbnails: {
+      high?: YouTubeVideoThumbnail
+      default?: YouTubeVideoThumbnail
+    }
+  }
+  statistics?: {
+    viewCount?: string
+    likeCount?: string
+    commentCount?: string
+  }
+  contentDetails: {
+    duration: string
+  }
+  liveStreamingDetails?: unknown
+}
+
+interface YouTubeVideosResponse {
+  items?: YouTubeVideoItem[]
+}
+
+// ISO 8601 duration pattern shared by parseDurationSeconds and formatDuration
+const ISO_8601_DURATION_PATTERN = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/
+
+/**
+ * Parses an ISO 8601 duration string (e.g. "PT1M30S") into total seconds.
+ * Returns null when the string does not match the expected pattern (e.g. "P0D" for live content),
+ * so callers can distinguish "unparseable" from "genuinely 0 seconds" instead of silently
+ * treating an unparseable duration as a (false) Short.
+ * @param {string} duration - ISO 8601 duration string from the YouTube Data API
+ * @returns {number | null} - Total duration in seconds, or null if unparseable
+ */
+function parseDurationSeconds(duration: string): number | null {
+  const match = duration.match(ISO_8601_DURATION_PATTERN)
+  if (!match) return null
+
+  const hours = match[1] ? Number.parseInt(match[1], 10) : 0
+  const minutes = match[2] ? Number.parseInt(match[2], 10) : 0
+  const seconds = match[3] ? Number.parseInt(match[3], 10) : 0
+
+  return hours * 3600 + minutes * 60 + seconds
 }
 
 export async function getChannelVideos(channelId: string, maxResults = 200): Promise<YouTubeVideo[]> {
   try {
-    // キャッシュを無効化するためのタイムスタンプパラメータを追加
-    const timestamp = Date.now()
-
     // チャンネルのアップロード済みプレイリストIDを取得
     const channelResponse = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${process.env.YOUTUBE_API_KEY}&_t=${timestamp}`,
-      { cache: "no-store" }, // キャッシュを完全に無効化
+      `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${process.env.YOUTUBE_API_KEY}`,
     )
 
     if (!channelResponse.ok) {
@@ -127,22 +140,22 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
     const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads
 
     // 全ての動画を取得するためのページネーション処理
-    let allPlaylistItems: any[] = []
+    let allPlaylistItems: YouTubePlaylistItemResource[] = []
     let nextPageToken: string | null = null
     let totalFetched = 0
 
     // ページネーションを使用して全ての動画を取得（最大maxResults件まで）
     do {
       const pageSize = Math.min(50, maxResults - totalFetched) // 1回のリクエストで最大50件
-      const pageUrl: string = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=${pageSize}&playlistId=${uploadsPlaylistId}&key=${process.env.YOUTUBE_API_KEY}${nextPageToken ? `&pageToken=${nextPageToken}` : ""}&_t=${timestamp}`
+      const pageUrl: string = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=${pageSize}&playlistId=${uploadsPlaylistId}&key=${process.env.YOUTUBE_API_KEY}${nextPageToken ? `&pageToken=${nextPageToken}` : ""}`
 
-      const playlistResponse: Response = await fetch(pageUrl, { cache: "no-store" })
+      const playlistResponse: Response = await fetch(pageUrl)
 
       if (!playlistResponse.ok) {
         throw new Error(`プレイリスト情報の取得に失敗: ${playlistResponse.status} ${playlistResponse.statusText}`)
       }
 
-      const playlistData: any = await playlistResponse.json()
+      const playlistData: YouTubePlaylistItemsResponse = await playlistResponse.json()
 
       if (!playlistData.items || playlistData.items.length === 0) {
         break
@@ -168,8 +181,8 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
 
     for (let i = 0; i < allPlaylistItems.length; i += chunkSize) {
       const chunk = allPlaylistItems.slice(i, i + chunkSize)
-        .filter(item => item && item.snippet && item.snippet.resourceId && item.snippet.resourceId.videoId)
-        .map((item) => item.snippet.resourceId.videoId)
+        .map((item) => item?.snippet?.resourceId?.videoId)
+        .filter((videoId): videoId is string => Boolean(videoId))
       if (chunk.length > 0) {
         videoIdChunks.push(chunk)
       }
@@ -181,29 +194,29 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
     for (const videoIds of videoIdChunks) {
       // liveStreamingDetailsを追加して、ライブ配信情報も取得
       const videosResponse = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails,liveStreamingDetails&id=${videoIds.join(",")}&key=${process.env.YOUTUBE_API_KEY}&_t=${timestamp}`,
-        { cache: "no-store" },
+        `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails,liveStreamingDetails&id=${videoIds.join(",")}&key=${process.env.YOUTUBE_API_KEY}`,
       )
 
       if (!videosResponse.ok) {
         throw new Error(`動画情報の取得に失敗: ${videosResponse.status} ${videosResponse.statusText}`)
       }
 
-      const videosData = await videosResponse.json()
+      const videosData: YouTubeVideosResponse = await videosResponse.json()
 
       if (videosData.items && videosData.items.length > 0) {
-        // 全ての動画IDに対してショート動画かどうかを一括チェック
-        const shortsResults = await checkMultipleShorts(videoIds)
-
         const videos = videosData.items
-          .filter((item: any) => item && item.id && item.snippet && item.statistics)
-          .map((item: any) => {
-          // タイトルに基づくショート判定（バックアップ方法）
+          .filter((item) => item && item.id && item.snippet && item.statistics)
+          .map((item) => {
+          // タイトルに基づくショート判定
           const titleHasShorts =
             item.snippet.title.toLowerCase().includes("#shorts") || item.snippet.title.toLowerCase().includes("#short")
 
-          // リダイレクトチェックの結果を使用
-          const isShort = shortsResults[item.id] || titleHasShorts
+          // ライブ配信はdurationがP0D等になり得るため、ショート判定から除外
+          const isLiveContent = !!item.liveStreamingDetails
+          const durationSeconds = parseDurationSeconds(item.contentDetails.duration)
+          // An unparseable duration must never be treated as a (false) Short;
+          // only classify by duration when it was successfully parsed.
+          const isShort = !isLiveContent && ((durationSeconds !== null && durationSeconds <= 60) || titleHasShorts)
 
           // 統計情報の安全な取得
           const statistics = item.statistics || {}
@@ -228,15 +241,15 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
             title: item.snippet.title,
             description: item.snippet.description,
             publishedAt: item.snippet.publishedAt,
-            thumbnailUrl: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default?.url,
+            thumbnailUrl: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default?.url || "",
             viewCount,
             likeCount,
             commentCount,
             duration: item.contentDetails.duration,
             // ライブ配信かどうかを判定
-            isLiveContent: !!item.liveStreamingDetails,
+            isLiveContent,
             // ショート動画かどうかを設定
-            isShort: isShort,
+            isShort,
           }
         })
 
@@ -247,13 +260,14 @@ export async function getChannelVideos(channelId: string, maxResults = 200): Pro
     return allVideos
   } catch (error) {
     debugError("YouTube APIエラー:", error)
-    return []
+    // Re-throw so callers can distinguish "zero videos" from "fetch failed"
+    throw error
   }
 }
 
 export function formatDuration(duration: string): string {
   // ISO 8601 形式の期間を読みやすい形式に変換
-  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/)
+  const match = duration.match(ISO_8601_DURATION_PATTERN)
   if (!match) return "00:00"
 
   const hours = match[1] ? Number.parseInt(match[1], 10) : 0

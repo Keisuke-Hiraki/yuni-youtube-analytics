@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 interface NeonTextProps {
@@ -11,12 +11,12 @@ interface NeonTextProps {
   animate?: boolean
 }
 
-export const NeonText = ({ 
-  children, 
-  className, 
-  color = 'pink', 
+export const NeonText = ({
+  children,
+  className,
+  color = 'pink',
   size = 'md',
-  animate = true 
+  animate = true
 }: NeonTextProps) => {
   const colorClasses = {
     pink: 'neon-text-pink',
@@ -33,6 +33,8 @@ export const NeonText = ({
     xl: 'text-6xl'
   }
 
+  const shouldReduceMotion = useReducedMotion()
+
   return (
     <motion.span
       className={cn(
@@ -41,7 +43,7 @@ export const NeonText = ({
         sizeClasses[size],
         className
       )}
-      animate={animate ? {
+      animate={animate && !shouldReduceMotion ? {
         filter: [
           `drop-shadow(0 0 5px currentColor)`,
           `drop-shadow(0 0 15px currentColor)`,

@@ -122,7 +122,7 @@ export function RefreshButton() {
           router.refresh()
         }, 500)
       }
-    } catch (error) {
+    } catch {
       toast({
         title: t("error"),
         description: t("updateErrorMessage"),

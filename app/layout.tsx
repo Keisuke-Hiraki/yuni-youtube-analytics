@@ -24,8 +24,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: "https://yuni-stellar-chart.vercel.app/og-image.png",
-        width: 1200,
-        height: 1200,
+        width: 2000,
+        height: 2000,
         alt: "YuNi Stellar Chart - Vsinger YuNiの動画分析ツール",
       },
     ],
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.png", type: "image/png", sizes: "32x32" },
+      { url: "/icon.png", type: "image/png" },
     ],
     shortcut: "/favicon.ico",
     apple: "/apple-touch-icon.png",

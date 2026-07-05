@@ -1,7 +1,21 @@
-import { Index } from '@upstash/vector'
+import { Index, type QueryResult } from '@upstash/vector'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { YouTubeVideo } from './youtube'
 import { debugLog, debugError } from './utils'
+
+// Upstash Vectorに保存している動画メタデータの型
+interface VideoMetadata {
+  title?: string
+  description?: string
+  publishedAt?: string
+  viewCount?: number
+  likeCount?: number
+  commentCount?: number
+  duration?: string
+  isLiveContent?: boolean
+  isShort?: boolean
+  originalId?: string
+}
 
 // Upstash Vector DBクライアントの初期化
 let vectorIndex: Index | null = null
@@ -108,13 +122,13 @@ async function updateTimestamp(): Promise<void> {
 }
 
 // 更新が必要かどうかを判定
-async function shouldUpdate(): Promise<boolean> {
+async function shouldUpdate(force = false): Promise<boolean> {
   // 強制更新フラグがある場合は常に更新
-  if (process.env.FORCE_UPDATE === 'true') {
+  if (force) {
     debugLog('強制更新フラグが設定されているため更新を実行します')
     return true
   }
-  
+
   const lastUpdate = await getLastUpdateTime()
   
   if (!lastUpdate) {
@@ -135,17 +149,17 @@ async function shouldUpdate(): Promise<boolean> {
 }
 
 // 動画データをVector DBにインデックス（修正版）
-export async function indexVideos(videos: YouTubeVideo[]): Promise<void> {
+export async function indexVideos(videos: YouTubeVideo[], options?: { force?: boolean }): Promise<void> {
   try {
     if (!vectorIndex || !genAI) {
       debugLog('Vector DBまたはGemini APIが初期化されていないため、インデックスをスキップします')
       return
     }
-    
+
     debugLog('Vector DB更新チェック開始')
-    
+
     // 更新が必要かチェック
-    if (!(await shouldUpdate())) {
+    if (!(await shouldUpdate(options?.force))) {
       debugLog('更新間隔内のためスキップします')
       return
     }
@@ -293,17 +307,17 @@ export async function searchVideos(query: string, topK: number = 20): Promise<Yo
     
     // 結果をYouTubeVideo形式に変換（型安全性向上）
     const videos: YouTubeVideo[] = results
-      ?.filter((result: any) => {
-        return result.metadata && 
-               result.score && 
+      ?.filter((result: QueryResult<VideoMetadata>) => {
+        return result.metadata &&
+               result.score &&
                result.score > 0.7 &&
                typeof result.metadata.viewCount === 'number' &&
                typeof result.metadata.likeCount === 'number'
       })
-      .map((result: any) => {
+      .map((result: QueryResult<VideoMetadata>) => {
         const metadata = result.metadata!
         return {
-          id: result.id,
+          id: String(result.id),
           title: String(metadata.title || ''),
           description: String(metadata.description || ''),
           publishedAt: String(metadata.publishedAt || ''),
@@ -357,16 +371,16 @@ export async function searchVideosForStats(query: string, year?: number): Promis
     const videoMap = new Map<string, YouTubeVideo>()
     
     results
-      ?.filter((result: any) => {
-        return result.metadata && 
-               result.score && 
+      ?.filter((result: QueryResult<VideoMetadata>) => {
+        return result.metadata &&
+               result.score &&
                result.score > 0.5 &&
                typeof result.metadata.viewCount === 'number' &&
                typeof result.metadata.likeCount === 'number'
       })
-      .forEach((result: any) => {
+      .forEach((result: QueryResult<VideoMetadata>) => {
         const metadata = result.metadata!
-        const originalId = metadata.originalId || result.id.replace('_stats', '')
+        const originalId = metadata.originalId || String(result.id).replace('_stats', '')
         
         if (!videoMap.has(originalId)) {
           videoMap.set(originalId, {
@@ -412,9 +426,12 @@ export async function validateIndexData(): Promise<{
     // インデックス統計を取得
     const stats = await vectorIndex.info()
     debugLog('インデックス統計:', stats)
-    
+
+    // vectorCount にはタイムスタンプ管理用ベクトル（TIMESTAMP_ID）が1件含まれるため、実際の動画ベクトル数を算出する際は差し引く
+    const actualVectorCount = Math.max(0, stats.vectorCount - 1)
+
     // 基本的な検証
-    if (stats.vectorCount === 0) {
+    if (actualVectorCount === 0) {
       issues.push('インデックスにデータが存在しません')
       recommendations.push('npm run index-videos を実行してデータをインデックスしてください')
     }

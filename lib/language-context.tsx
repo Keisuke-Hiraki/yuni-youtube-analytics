@@ -79,6 +79,31 @@ export const translations: Translations = {
     sortOrderDesc: "降順",
     defaultSort: "デフォルト",
     resetSort: "ソートをリセット",
+    // ビュー切り替え関連
+    grid: "グリッド",
+    list: "リスト",
+    play: "再生",
+    // 言語切り替え関連
+    switchLanguage: "言語を切り替える",
+    // 404ページ関連
+    notFoundTitle: "ページが見つかりません",
+    notFoundDescription: "お探しのページは存在しないか、移動した可能性があります。",
+    backToHome: "トップページに戻る",
+    // チャットボット関連
+    chatTitle: "YuNi動画アシスタント",
+    chatOpenLabel: "チャットボットを開く",
+    chatSendLabel: "送信",
+    chatInputLabel: "メッセージ入力欄",
+    chatPlaceholder: "メッセージを入力...",
+    chatInitialMessage: "こんにちは！YuNiの動画について何でも聞いてください。動画の検索や質問にお答えします！",
+    chatErrorTooLarge: "送信されたメッセージが長すぎます。質問を短くしてもう一度お試しください。",
+    chatErrorUnprocessable: "リクエストの内容に問題があります。質問を見直してもう一度お試しください。",
+    chatErrorNetwork: "ネットワーク接続の問題が発生しました。インターネット接続を確認してから、もう一度お試しください。",
+    chatErrorUnauthorized: "APIキーが無効または未設定です。管理者にお問い合わせください。",
+    chatErrorServerInternal: "サーバー内部エラーが発生しました。しばらく経ってからもう一度お試しください。",
+    chatErrorBadGateway: "サーバー接続エラーが発生しました。しばらく経ってからもう一度お試しください。",
+    chatErrorServiceUnavailable: "サービスが一時的に利用できません。メンテナンス中の可能性があります。しばらく経ってからもう一度お試しください。",
+    chatErrorUnknownPrefix: "エラーが発生しました。",
   },
   en: {
     siteDescription: "Ranking YuNi's video performances by popularity, engagement, and views",
@@ -144,6 +169,31 @@ export const translations: Translations = {
     sortOrderDesc: "Descending",
     defaultSort: "Default",
     resetSort: "Reset Sort",
+    // View switching related
+    grid: "Grid",
+    list: "List",
+    play: "Play",
+    // Language switching related
+    switchLanguage: "Switch language",
+    // 404 page related
+    notFoundTitle: "Page Not Found",
+    notFoundDescription: "The page you are looking for does not exist or has been moved.",
+    backToHome: "Back to Home",
+    // Chatbot related
+    chatTitle: "YuNi Video Assistant",
+    chatOpenLabel: "Open chatbot",
+    chatSendLabel: "Send",
+    chatInputLabel: "Message input",
+    chatPlaceholder: "Type a message...",
+    chatInitialMessage: "Hi! Ask me anything about YuNi's videos. I can help you search and answer questions!",
+    chatErrorTooLarge: "The message you sent is too long. Please shorten your question and try again.",
+    chatErrorUnprocessable: "There is a problem with the request content. Please review your question and try again.",
+    chatErrorNetwork: "A network connection problem occurred. Please check your internet connection and try again.",
+    chatErrorUnauthorized: "The API key is invalid or missing. Please contact the administrator.",
+    chatErrorServerInternal: "An internal server error occurred. Please try again later.",
+    chatErrorBadGateway: "A server connection error occurred. Please try again later.",
+    chatErrorServiceUnavailable: "The service is temporarily unavailable. It may be under maintenance. Please try again later.",
+    chatErrorUnknownPrefix: "An error occurred.",
   },
   zh: {
     siteDescription: "按人气、互动和观看次数对YuNi的视频表现进行排名",
@@ -209,6 +259,31 @@ export const translations: Translations = {
     sortOrderDesc: "降序",
     defaultSort: "默认",
     resetSort: "重置排序",
+    // 视图切换相关
+    grid: "网格",
+    list: "列表",
+    play: "播放",
+    // 语言切换相关
+    switchLanguage: "切换语言",
+    // 404页面相关
+    notFoundTitle: "页面未找到",
+    notFoundDescription: "您要查找的页面不存在或已被移动。",
+    backToHome: "返回主页",
+    // 聊天机器人相关
+    chatTitle: "YuNi 视频助手",
+    chatOpenLabel: "打开聊天机器人",
+    chatSendLabel: "发送",
+    chatInputLabel: "消息输入框",
+    chatPlaceholder: "请输入消息...",
+    chatInitialMessage: "你好！关于YuNi的视频有任何问题都可以问我，我可以帮你搜索视频并回答问题！",
+    chatErrorTooLarge: "发送的消息过长。请缩短问题内容后重试。",
+    chatErrorUnprocessable: "请求内容存在问题。请检查问题内容后重试。",
+    chatErrorNetwork: "发生网络连接问题。请检查网络连接后重试。",
+    chatErrorUnauthorized: "API密钥无效或未设置。请联系管理员。",
+    chatErrorServerInternal: "发生服务器内部错误。请稍后重试。",
+    chatErrorBadGateway: "发生服务器连接错误。请稍后重试。",
+    chatErrorServiceUnavailable: "服务暂时不可用，可能正在维护中。请稍后重试。",
+    chatErrorUnknownPrefix: "发生了错误。",
   },
   ko: {
     siteDescription: "인기도, 참여도, 조회수별 YuNi의 비디오 퍼포먼스 순위",
@@ -274,6 +349,31 @@ export const translations: Translations = {
     sortOrderDesc: "내림차순",
     defaultSort: "기본값",
     resetSort: "정렬 초기화",
+    // 뷰 전환 관련
+    grid: "그리드",
+    list: "목록",
+    play: "재생",
+    // 언어 전환 관련
+    switchLanguage: "언어 변경",
+    // 404 페이지 관련
+    notFoundTitle: "페이지를 찾을 수 없습니다",
+    notFoundDescription: "찾고 있는 페이지가 존재하지 않거나 이동되었을 수 있습니다.",
+    backToHome: "홈으로 돌아가기",
+    // 챗봇 관련
+    chatTitle: "YuNi 동영상 어시스턴트",
+    chatOpenLabel: "챗봇 열기",
+    chatSendLabel: "전송",
+    chatInputLabel: "메시지 입력란",
+    chatPlaceholder: "메시지를 입력하세요...",
+    chatInitialMessage: "안녕하세요! YuNi의 동영상에 대해 무엇이든 물어보세요. 동영상 검색과 질문에 답변해 드립니다!",
+    chatErrorTooLarge: "전송된 메시지가 너무 깁니다. 질문을 짧게 줄여서 다시 시도해 주세요.",
+    chatErrorUnprocessable: "요청 내용에 문제가 있습니다. 질문을 확인하고 다시 시도해 주세요.",
+    chatErrorNetwork: "네트워크 연결 문제가 발생했습니다. 인터넷 연결을 확인한 후 다시 시도해 주세요.",
+    chatErrorUnauthorized: "API 키가 유효하지 않거나 설정되지 않았습니다. 관리자에게 문의해 주세요.",
+    chatErrorServerInternal: "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+    chatErrorBadGateway: "서버 연결 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+    chatErrorServiceUnavailable: "서비스를 일시적으로 사용할 수 없습니다. 점검 중일 수 있습니다. 잠시 후 다시 시도해 주세요.",
+    chatErrorUnknownPrefix: "오류가 발생했습니다.",
   },
 }
 
@@ -300,9 +400,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // 言語設定が変更されたらローカルストレージに保存
+  // 言語設定が変更されたらローカルストレージに保存し、document.documentElement.lang を更新
   useEffect(() => {
     localStorage.setItem("language", language)
+    document.documentElement.lang = language
   }, [language])
 
   // 翻訳関数

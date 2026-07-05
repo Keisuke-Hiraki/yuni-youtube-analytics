@@ -39,28 +39,33 @@ export default function VideoDetailDialog({ video, onClose }: VideoDetailDialogP
           showAnimation ? "scale-100 opacity-100" : "scale-95 opacity-0"
         } ${isMobile ? "p-3 sm:p-6 w-[calc(100%-16px)]" : ""}`}
         onContextMenu={preventContextMenu}
+        // Prevent Radix from auto-focusing the YouTube iframe on open: keydown events
+        // inside an iframe never bubble to the parent document, so Escape would be
+        // dead on arrival. Skipping auto-focus leaves focus on the content wrapper
+        // (tabIndex -1), where Escape still works.
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className={isMobile ? "space-y-1" : ""}>
           <DialogTitle className={`${isMobile ? "text-lg" : "text-xl"}`}>{video.title}</DialogTitle>
           <DialogDescription className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1 sm:mt-2">
             <div className="flex items-center gap-1">
-              <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+              <Calendar className="w-3 h-3 sm:w-4 sm:h-4" aria-hidden="true" />
               <span className="whitespace-nowrap text-xs sm:text-sm">{formatDate(video.publishedAt, language)}</span>
             </div>
             <div className="flex items-center gap-1">
-              <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+              <Eye className="w-3 h-3 sm:w-4 sm:h-4" aria-hidden="true" />
               <span className="text-xs sm:text-sm">{formatNumber(video.viewCount)}</span>
             </div>
             <div className="flex items-center gap-1">
-              <ThumbsUp className="w-3 h-3 sm:w-4 sm:h-4" />
+              <ThumbsUp className="w-3 h-3 sm:w-4 sm:h-4" aria-hidden="true" />
               <span className="text-xs sm:text-sm">{formatNumber(video.likeCount)}</span>
             </div>
             <div className="flex items-center gap-1">
-              <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
+              <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" aria-hidden="true" />
               <span className="text-xs sm:text-sm">{formatNumber(video.commentCount)}</span>
             </div>
             {video.isShort && (
-              <Badge variant="secondary" className="gap-1 flex items-center bg-red-100 text-red-800 text-xs">
+              <Badge variant="secondary" className="gap-1 flex items-center bg-red-500/20 text-red-300 border-red-500/40 text-xs">
                 #shorts
               </Badge>
             )}
@@ -103,13 +108,11 @@ export default function VideoDetailDialog({ video, onClose }: VideoDetailDialogP
         </div>
 
         <div className="flex justify-end mt-4">
-          <Button
-            variant="outline"
-            className="gap-2 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 active:scale-95 text-xs sm:text-sm"
-            onClick={() => window.open(`https://www.youtube.com/watch?v=${video.id}`, "_blank")}
-          >
-            <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
-            {t("viewOnYouTube")}
+          <Button asChild variant="outline" className="gap-2 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 active:scale-95 text-xs sm:text-sm">
+            <a href={`https://www.youtube.com/watch?v=${video.id}`} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" aria-hidden="true" />
+              {t("viewOnYouTube")}
+            </a>
           </Button>
         </div>
       </DialogContent>

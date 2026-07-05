@@ -1,7 +1,7 @@
 import Groq from 'groq-sdk'
 import { YouTubeVideo } from './youtube'
 import { debugLog, debugError } from '@/lib/utils'
-import { indexVideos, searchVideos, searchVideosForStats } from './vector-db'
+import { searchVideos, searchVideosForStats } from './vector-db'
 
 // チャットメッセージの型定義
 export interface ChatMessage {
@@ -21,30 +21,36 @@ function analyzeQueryType(message: string): 'statistical' | 'search' | 'recent' 
     /何番目/, /順位/, /比較/, /統計/, /平均/, /合計/, /総/
   ]
   
-  // 時系列質問のパターン  
+  // 時系列質問のパターン（具体的な年は extractYear 側で判定するためここには含めない）
   const temporalPatterns = [
-    /\d{4}年/, /今年/, /去年/, /最近/, /最新/, /新しい/, /古い/,
+    /今年/, /去年/, /最近/, /最新/, /新しい/, /古い/,
     /月/, /週/, /日/, /期間/
   ]
-  
+
   // 検索質問のパターン
   const searchPatterns = [
     /について/, /に関する/, /という/, /タイトル/, /歌/, /ゲーム/, /実況/
   ]
-  
-  if (statisticalPatterns.some(pattern => pattern.test(lowerMessage)) || 
-      temporalPatterns.some(pattern => pattern.test(lowerMessage))) {
+
+  // Statistical patterns take priority over temporal ones (e.g. "2023年で一番人気の動画" is statistical, not just recent)
+  if (statisticalPatterns.some(pattern => pattern.test(lowerMessage))) {
     return 'statistical'
   }
-  
+
+  // Queries mentioning a concrete year (e.g. "2023年の動画を教えて") must go through the
+  // year-filtered statistical search path, not 'recent' (which only returns the newest 30 videos)
+  if (extractYear(message) !== undefined) {
+    return 'statistical'
+  }
+
   if (temporalPatterns.some(pattern => pattern.test(lowerMessage))) {
     return 'recent'
   }
-  
+
   if (searchPatterns.some(pattern => pattern.test(lowerMessage))) {
     return 'search'
   }
-  
+
   return 'general'
 }
 
@@ -86,11 +92,8 @@ async function prepareVideoDataWithRAG(videos: YouTubeVideo[], message: string) 
   }
   
   try {
-    // まずVector DBにインデックス（必要に応じて）
-    debugLog('Vector DB インデックス試行中...')
-    await indexVideos(videos)
-    debugLog('Vector DB インデックス完了')
-    
+    // インデックス更新はチャットパスでは行わない（scripts/index-videos.ts と admin force-update ルートが担当）。
+    // チャット応答をブロックしないよう、ここでは検索のみを行う。
     switch (queryType) {
       case 'statistical':
         // 統計的質問：RAGで関連動画を検索し、年でフィルタリング
@@ -103,7 +106,7 @@ async function prepareVideoDataWithRAG(videos: YouTubeVideo[], message: string) 
         }
         
         // 統計処理用にソート
-        let sortedVideos = [...statsVideos]
+        const sortedVideos = [...statsVideos]
         if (message.includes('少ない') || message.includes('最小')) {
           sortedVideos.sort((a, b) => a.viewCount - b.viewCount)
         } else {
@@ -279,16 +282,6 @@ function prepareVideoDataFallback(videos: YouTubeVideo[], message: string, query
   }
 }
 
-// 動画データを検索用のテキストに変換
-function formatVideoForSearch(video: YouTubeVideo): string {
-  return `タイトル: ${video.title}
-視聴回数: ${video.viewCount.toLocaleString()}回
-いいね数: ${video.likeCount.toLocaleString()}
-コメント数: ${video.commentCount.toLocaleString()}
-公開日: ${video.publishedAt}
-URL: https://www.youtube.com/watch?v=${video.id}`
-}
-
 export async function generateChatResponse(
   message: string,
   videos: YouTubeVideo[],
@@ -364,56 +357,101 @@ ${videoData}
     return result
   } catch (error) {
     debugError('Groq API エラー:', error)
-    
+
     if (error instanceof Error) {
       debugError('Groqエラー詳細:', {
         name: error.name,
         message: error.message
       })
-      
-      // Groq公式ドキュメントに基づくエラーハンドリング
-      // https://console.groq.com/docs/errors
-      
-      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-        return 'APIキーが無効です。管理者にGROQ_API_KEYの確認を依頼してください。'
-      } else if (error.message.includes('429') || error.message.includes('Too Many Requests')) {
-        // 429 Too Many Requests: Groq公式のレート制限エラー
-        return `🕐 申し訳ございません。現在、AIアシスタントへのアクセスが集中しており、一時的に利用制限に達しています。
+    }
+
+    // ステータス別のユーザー向け文言・ステータスコード変換は mapGroqError（呼び出し元）に一本化する
+    throw error
+  }
+}
+
+// Groqのエラー（またはその他の内部エラー）を、ユーザー向けのHTTPステータス・メッセージに変換する。
+// route.ts と generateChatResponse に重複していたステータス別分岐をここに集約する。
+// 分類できないエラーは汎用文言を返し、内部情報を漏らさない（WP1bの不変条件）。
+export function mapGroqError(error: unknown): { status: number; message: string } {
+  if (!(error instanceof Error)) {
+    return {
+      status: 500,
+      message: 'チャットボットでエラーが発生しました。しばらく経ってからもう一度お試しください。'
+    }
+  }
+
+  // Groq公式ドキュメントに基づくエラーハンドリング
+  // https://console.groq.com/docs/errors
+  if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+    return { status: 401, message: 'APIキーが無効です。管理者にGROQ_API_KEYの確認を依頼してください。' }
+  }
+
+  if (error.message.includes('429') || error.message.includes('Too Many Requests')) {
+    // 429 Too Many Requests: Groq公式のレート制限エラー
+    return {
+      status: 429,
+      message: `🕐 申し訳ございません。現在、AIアシスタントへのアクセスが集中しており、一時的に利用制限に達しています。
 
 ⏰ **1分程度お待ちいただいてから、もう一度お試しください。**
 
 この制限は短時間で解除されますので、少しお時間をいただければと思います。ご不便をおかけして申し訳ありません。
 
-💡 **ヒント**: 
+💡 **ヒント**:
 - 質問を簡潔にまとめていただくと、より効率的に回答できます
 - 複数の質問がある場合は、一つずつお聞きください
 
 お待ちいただき、ありがとうございます！🙏`
-      } else if (error.message.includes('498') || error.message.includes('Flex Tier Capacity Exceeded')) {
-        // 498 Custom: Flex Tier Capacity Exceeded
-        return `⚡ 現在、Groq Flexサービスの容量が上限に達しています。
+    }
+  }
+
+  if (error.message.includes('498') || error.message.includes('Flex Tier Capacity Exceeded')) {
+    // 498 Custom: Flex Tier Capacity Exceeded
+    return {
+      status: 498,
+      message: `⚡ 現在、Groq Flexサービスの容量が上限に達しています。
 
 ⏰ **しばらく経ってから、もう一度お試しください。**
 
 このエラーは一時的なものですので、少しお時間をいただければと思います。`
-      } else if (error.message.includes('413') || error.message.includes('Request Entity Too Large')) {
-        // 413 Request Entity Too Large
-        return '送信されたメッセージが長すぎます。質問を短くしてもう一度お試しください。'
-      } else if (error.message.includes('422') || error.message.includes('Unprocessable Entity')) {
-        // 422 Unprocessable Entity
-        return 'リクエストの内容に問題があります。質問を見直してもう一度お試しください。'
-      } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
-        // 500 Internal Server Error
-        return 'サーバー内部エラーが発生しました。しばらく経ってからもう一度お試しください。'
-      } else if (error.message.includes('502') || error.message.includes('Bad Gateway')) {
-        // 502 Bad Gateway
-        return 'サーバー接続エラーが発生しました。しばらく経ってからもう一度お試しください。'
-      } else if (error.message.includes('503') || error.message.includes('Service Unavailable')) {
-        // 503 Service Unavailable
-        return 'サービスが一時的に利用できません。メンテナンス中の可能性があります。しばらく経ってからもう一度お試しください。'
-      }
     }
-    
-    return 'すみません、現在チャットボットが利用できません。しばらく経ってからもう一度お試しください。'
+  }
+
+  if (error.message.includes('413') || error.message.includes('Request Entity Too Large')) {
+    // 413 Request Entity Too Large
+    return { status: 413, message: '送信されたメッセージが長すぎます。質問を短くしてもう一度お試しください。' }
+  }
+
+  if (error.message.includes('422') || error.message.includes('Unprocessable Entity')) {
+    // 422 Unprocessable Entity
+    return { status: 422, message: 'リクエストの内容に問題があります。質問を見直してもう一度お試しください。' }
+  }
+
+  if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+    // 500 Internal Server Error
+    return { status: 500, message: 'サーバー内部エラーが発生しました。しばらく経ってからもう一度お試しください。' }
+  }
+
+  if (error.message.includes('502') || error.message.includes('Bad Gateway')) {
+    // 502 Bad Gateway
+    return { status: 502, message: 'サーバー接続エラーが発生しました。しばらく経ってからもう一度お試しください。' }
+  }
+
+  if (error.message.includes('503') || error.message.includes('Service Unavailable')) {
+    // 503 Service Unavailable
+    return {
+      status: 503,
+      message: 'サービスが一時的に利用できません。メンテナンス中の可能性があります。しばらく経ってからもう一度お試しください。'
+    }
+  }
+
+  if (error.message.includes('network') || error.message.includes('fetch')) {
+    return { status: 503, message: 'ネットワークエラーまたはサービスが一時的に利用できません。しばらく経ってからもう一度お試しください。' }
+  }
+
+  // 分類できないエラー: 内部情報（スタックトレース等）はクライアントに公開せず、汎用文言のみ返す
+  return {
+    status: 500,
+    message: 'チャットボットでエラーが発生しました。しばらく経ってからもう一度お試しください。'
   }
 } 
