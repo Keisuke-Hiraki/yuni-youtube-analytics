@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 import { indexVideos, getIndexStatus } from '../lib/vector-db'
-import { getChannelVideos } from '../lib/youtube'
+import { getChannelVideos, getMaxVideoResults } from '../lib/youtube'
 import { debugLog, debugError } from '../lib/utils'
 
 // YuNiのチャンネルID
@@ -21,8 +21,9 @@ async function main() {
     })
     
     // 動画データを取得（取得失敗時はgetChannelVideosが例外をthrowする）
+    // MAX_VIDEO_RESULTS 未設定時は全件取得
     console.log('📹 動画データを取得中...')
-    const videos = await getChannelVideos(YUNI_CHANNEL_ID, 500) // 最大500件
+    const videos = await getChannelVideos(YUNI_CHANNEL_ID, getMaxVideoResults())
 
     if (videos.length === 0) {
       console.error('❌ 動画データが0件です。処理を中断します。')

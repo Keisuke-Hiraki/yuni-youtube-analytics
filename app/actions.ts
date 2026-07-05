@@ -1,6 +1,6 @@
 "use server"
 
-import { getChannelVideos, type YouTubeVideo } from "@/lib/youtube"
+import { getChannelVideos, getMaxVideoResults, type YouTubeVideo } from "@/lib/youtube"
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import { debugLog, debugError } from '@/lib/utils'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -138,8 +138,8 @@ async function fetchYuNiVideosRaw(): Promise<{
 }> {
   const channelId = requireEnv("YOUTUBE_CHANNEL_ID")
 
-  // 動画データを取得
-  const videos = await getChannelVideos(channelId, 500)
+  // 動画データを取得（MAX_VIDEO_RESULTS 未設定時は全件取得）
+  const videos = await getChannelVideos(channelId, getMaxVideoResults())
 
   // 最終更新日時を記録
   const lastUpdated = new Date().toISOString()
