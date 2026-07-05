@@ -39,6 +39,11 @@ export default function VideoDetailDialog({ video, onClose }: VideoDetailDialogP
           showAnimation ? "scale-100 opacity-100" : "scale-95 opacity-0"
         } ${isMobile ? "p-3 sm:p-6 w-[calc(100%-16px)]" : ""}`}
         onContextMenu={preventContextMenu}
+        // Prevent Radix from auto-focusing the YouTube iframe on open: keydown events
+        // inside an iframe never bubble to the parent document, so Escape would be
+        // dead on arrival. Skipping auto-focus leaves focus on the content wrapper
+        // (tabIndex -1), where Escape still works.
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className={isMobile ? "space-y-1" : ""}>
           <DialogTitle className={`${isMobile ? "text-lg" : "text-xl"}`}>{video.title}</DialogTitle>
