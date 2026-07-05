@@ -21,30 +21,36 @@ function analyzeQueryType(message: string): 'statistical' | 'search' | 'recent' 
     /何番目/, /順位/, /比較/, /統計/, /平均/, /合計/, /総/
   ]
   
-  // 時系列質問のパターン  
+  // 時系列質問のパターン（具体的な年は extractYear 側で判定するためここには含めない）
   const temporalPatterns = [
-    /\d{4}年/, /今年/, /去年/, /最近/, /最新/, /新しい/, /古い/,
+    /今年/, /去年/, /最近/, /最新/, /新しい/, /古い/,
     /月/, /週/, /日/, /期間/
   ]
-  
+
   // 検索質問のパターン
   const searchPatterns = [
     /について/, /に関する/, /という/, /タイトル/, /歌/, /ゲーム/, /実況/
   ]
-  
+
   // Statistical patterns take priority over temporal ones (e.g. "2023年で一番人気の動画" is statistical, not just recent)
   if (statisticalPatterns.some(pattern => pattern.test(lowerMessage))) {
+    return 'statistical'
+  }
+
+  // Queries mentioning a concrete year (e.g. "2023年の動画を教えて") must go through the
+  // year-filtered statistical search path, not 'recent' (which only returns the newest 30 videos)
+  if (extractYear(message) !== undefined) {
     return 'statistical'
   }
 
   if (temporalPatterns.some(pattern => pattern.test(lowerMessage))) {
     return 'recent'
   }
-  
+
   if (searchPatterns.some(pattern => pattern.test(lowerMessage))) {
     return 'search'
   }
-  
+
   return 'general'
 }
 
